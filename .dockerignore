@@ -59,7 +59,7 @@ frontend/node_modules/
 backend/vendor/
 
 # Configuration files (will be mounted as volumes)
-backend/configs/
+# Note: backend/configs/ is NOT ignored because Dockerfile.backend needs it
 *.env
 .env.*
 !.env.example
