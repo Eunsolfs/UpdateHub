@@ -9,7 +9,205 @@
 
 **手把手教你从零开始部署 UpdateHub，适合所有用户！**
 
+### CI/CD 部署方式（推荐）⭐
+
+UpdateHub 现在使用现代化的 CI/CD 部署方式：
+
+**新方式（预构建镜像）**：
+- ⚡ 部署速度快（2-5分钟）
+- 💾 服务器不需要构建环境
+- 🌐 网络消耗小
+- 🎯 构建环境标准化
+- 📦 版本管理清晰
+
+**部署流程**：
+```
+GitHub 发布新版本
+    ↓
+GitHub Actions 自动构建镜像
+    ↓
+镜像推送到 GitHub Container Registry
+    ↓
+服务器拉取预构建镜像
+    ↓
+Docker Compose 启动服务
+```
+
 ### 快速部署
+
+#### 使用自动化脚本部署
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/your-username/UpdateHub.git
+cd UpdateHub
+
+# 2. 进入脚本目录
+cd scripts
+
+# 3. 赋予执行权限
+chmod +x *.sh
+
+# 4. 运行环境检查
+./check_env.sh
+
+# 5. 运行一键部署脚本
+./deploy.sh
+```
+
+部署脚本会自动：
+- ✅ 检查环境
+- ✅ 配置环境变量
+- ✅ 拉取预构建的 Docker 镜像
+- ✅ 启动服务
+- ✅ 验证部署
+
+详细说明请参考：
+- [第一次部署指南](docs/FIRST_TIME_DEPLOYMENT.md)
+- [1Panel 部署指南](docs/1PANEL_DEPLOYMENT.md)
+- [脚本使用指南](scripts/README.md)
+
+#### 更新系统
+
+```bash
+cd /opt/UpdateHub/scripts
+./update.sh
+```
+
+更新脚本会自动：
+- ✅ 备份当前配置
+- ✅ 拉取新版本镜像
+- ✅ 更新服务
+- ✅ 验证更新结果
+
+详细说明请参考 [服务更新指南](docs/SERVICE_UPDATE.md)。
+
+#### 手动部署
+
+如果你想手动部署，请参考以下文档：
+- [第一次部署指南](docs/FIRST_TIME_DEPLOYMENT.md)
+- [1Panel 部署指南](docs/1PANEL_DEPLOYMENT.md)
+- [快速开始指南](docs/QUICK_START.md)
+
+## 📦 镜像版本管理
+
+### 可用镜像
+
+UpdateHub 提供预构建的 Docker 镜像，托管在 GitHub Container Registry：
+
+- **后端镜像**: `ghcr.io/your-username/updatehub-backend`
+- **前端镜像**: `ghcr.io/your-username/updatehub-frontend`
+
+### 镜像标签
+
+- `latest` - 最新版本
+- `v1.0.0` - 具体版本号
+- `v1.1.0` - 其他版本
+
+### 拉取镜像
+
+```bash
+# 拉取最新版本
+docker pull ghcr.io/your-username/updatehub-backend:latest
+docker pull ghcr.io/your-username/updatehub-frontend:latest
+
+# 拉取特定版本
+docker pull ghcr.io/your-username/updatehub-backend:v1.0.0
+docker pull ghcr.io/your-username/updatehub-frontend:v1.0.0
+```
+
+### 版本回滚
+
+如果需要回滚到之前的版本：
+
+```bash
+# 1. 修改 .env 文件中的镜像版本
+# BACKEND_IMAGE=ghcr.io/your-username/updatehub-backend:v0.9.0
+# FRONTEND_IMAGE=ghcr.io/your-username/updatehub-frontend:v0.9.0
+
+# 2. 重新启动服务
+cd /opt/UpdateHub
+docker-compose -f docker/docker-compose.1panel.yml up -d
+```
+
+## 📚 文档
+
+- [第一次部署指南](docs/FIRST_TIME_DEPLOYMENT.md) - 手把手教你从零开始部署
+- [1Panel 部署指南](docs/1PANEL_DEPLOYMENT.md) - 在 1Panel 环境中部署
+- [服务更新指南](docs/SERVICE_UPDATE.md) - 如何更新系统
+- [快速开始指南](docs/QUICK_START.md) - 快速上手指南
+- [脚本使用指南](scripts/README.md) - 自动化脚本使用说明
+- [文档索引](docs/INDEX.md) - 完整文档导航
+
+## 🛠️ 开发
+
+### 本地开发
+
+#### 后端开发
+
+```bash
+cd backend
+go mod download
+go run cmd/server/main.go
+```
+
+#### 前端开发
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+访问 http://localhost:3000
+
+### 构建本地镜像
+
+如果你想本地构建镜像（不使用 CI/CD）：
+
+```bash
+# 构建后端镜像
+docker build -f docker/Dockerfile.backend -t updatehub-backend .
+
+# 构建前端镜像
+docker build -f docker/Dockerfile.frontend -t updatehub-frontend .
+```
+
+### 运行本地构建的镜像
+
+修改 `docker/docker-compose.1panel.yml` 中的镜像地址：
+
+```yaml
+services:
+  backend:
+    image: updatehub-backend  # 使用本地构建的镜像
+  frontend:
+    image: updatehub-frontend  # 使用本地构建的镜像
+```
+
+然后启动服务：
+
+```bash
+docker-compose -f docker/docker-compose.1panel.yml up -d
+```
+
+## 🤝 贡献
+
+欢迎贡献代码！请参考贡献指南。
+
+## 📄 许可证
+
+MIT License
+
+## 📞 联系方式
+
+如有问题或建议，请通过以下方式联系：
+
+- 提交 Issue
+- 发起 Pull Request
+- 发送邮件
+
+## 功能特性
 
 ## 功能特性
 
@@ -73,6 +271,8 @@
 - Docker + Docker Compose - 容器化部署
 - Nginx - 反向代理
 - 1panel - 服务器管理面板
+- GitHub Actions - CI/CD 自动构建
+- GitHub Container Registry - 镜像仓库
 - Redis - 缓存和会话存储（可选）
 - Redis Pub/Sub - WebSocket消息分发（可选）
 
@@ -123,10 +323,23 @@ lfs-update-server/
 ├── docker/                 # Docker配置
 │   ├── Dockerfile.backend
 │   ├── Dockerfile.frontend
-│   └── docker-compose.yml
+│   ├── docker-compose.yml
+│   ├── docker-compose.1panel.yml
+│   └── .env.example
 ├── scripts/                # 部署脚本
-│   └── deploy.sh
+│   ├── check_env.sh        # 环境检查脚本
+│   ├── deploy.sh           # 一键部署脚本 (CI/CD版本)
+│   ├── update.sh           # 一键更新脚本 (CI/CD版本)
+│   └── backup.sh           # 自动备份脚本
+├── .github/                # GitHub Actions 配置
+│   └── workflows/
+│       └── docker-build.yml  # Docker 镜像自动构建
 └── docs/                   # 文档
+    ├── FIRST_TIME_DEPLOYMENT.md    # 第一次部署指南
+    ├── 1PANEL_DEPLOYMENT.md        # 1Panel 部署指南
+    ├── SERVICE_UPDATE.md           # 服务更新指南
+    ├── QUICK_START.md              # 快速开始指南
+    └── INDEX.md                    # 文档索引
 ```
 
 ## API接口

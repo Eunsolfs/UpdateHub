@@ -1,7 +1,7 @@
 version: '3.8'
 
 # UpdateHub 1Panel 专用部署配置
-# 这个配置文件针对 1Panel 环境进行了优化
+# 使用预构建的Docker镜像，避免在服务器端构建
 
 services:
   # PostgreSQL 数据库
@@ -11,10 +11,10 @@ services:
     environment:
       POSTGRES_DB: updatehub
       POSTGRES_USER: updatehub
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-updatehub}  # 支持环境变量
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-updatehub}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - /opt/UpdateHub/backups/postgres:/backups  # 备份目录
+      - /opt/UpdateHub/backups/postgres:/backups
     ports:
       - "5432:5432"
     networks:
@@ -30,7 +30,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: updatehub-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}  # 可选密码
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     volumes:
       - redis_data:/data
     ports:
@@ -44,11 +44,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # 后端服务
+  # 后端服务 - 使用预构建镜像
   backend:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.backend
+    image: ${BACKEND_IMAGE:-ghcr.io/your-username/updatehub-backend:latest}
     container_name: updatehub-backend
     environment:
       - DATABASE_HOST=postgres
@@ -60,13 +58,14 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-this}
-      - SERVER_MODE=release  # 生产环境使用 release 模式
+      - SERVER_MODE=${SERVER_MODE:-release}
+      - SERVER_PORT=${SERVER_PORT:-8080}
     volumes:
       - /opt/UpdateHub/backend/uploads:/root/uploads
       - /opt/UpdateHub/backend/configs:/root/configs
-      - /opt/UpdateHub/backups/uploads:/backups  # 备份目录
+      - /opt/UpdateHub/backups/uploads:/backups
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,11 +80,9 @@ services:
       timeout: 10s
       retries: 3
 
-  # 前端服务
+  # 前端服务 - 使用预构建镜像
   frontend:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.frontend
+    image: ${FRONTEND_IMAGE:-ghcr.io/your-username/updatehub-frontend:latest}
     container_name: updatehub-frontend
     ports:
       - "80:80"

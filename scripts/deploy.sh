@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ################################################################################
-# UpdateHub 一键部署脚本
-# 适用于 Linux 服务器和 1Panel 环境
+# UpdateHub 一键部署脚本 (CI/CD版本)
+# 使用预构建的Docker镜像，避免在服务器端构建
 ################################################################################
 
 set -e  # 遇到错误立即退出
@@ -18,7 +18,11 @@ NC='\033[0m' # No Color
 PROJECT_NAME="UpdateHub"
 INSTALL_DIR="/opt/UpdateHub"
 BACKUP_DIR="/opt/UpdateHub/backups"
-GITHUB_REPO="https://github.com/Eunsolfs/UpdateHub.git"
+GITHUB_REPO="https://github.com/your-username/UpdateHub.git"
+
+# 镜像配置（GitHub Container Registry）
+DEFAULT_BACKEND_IMAGE="ghcr.io/your-username/updatehub-backend:latest"
+DEFAULT_FRONTEND_IMAGE="ghcr.io/your-username/updatehub-frontend:latest"
 
 # 默认配置
 DEFAULT_DB_PASSWORD="updatehub"
@@ -97,7 +101,7 @@ check_environment() {
     print_success "Git 已安装"
     
     # 检查端口占用
-    if netstat -tuln | grep -q ":8080 "; then
+    if netstat -tuln 2>/dev/null | grep -q ":8080 "; then
         print_warning "端口 8080 已被占用"
         read -p "是否继续? (y/n): " -n 1 -r
         echo
@@ -106,7 +110,7 @@ check_environment() {
         fi
     fi
     
-    if netstat -tuln | grep -q ":80 "; then
+    if netstat -tuln 2>/dev/null | grep -q ":80 "; then
         print_warning "端口 80 已被占用"
         read -p "是否继续? (y/n): " -n 1 -r
         echo
@@ -141,16 +145,26 @@ get_user_input() {
     read -p "服务器端口 [$DEFAULT_SERVER_PORT]: " input_port
     SERVER_PORT=${input_port:-$DEFAULT_SERVER_PORT}
     
-    # 仓库地址
-    read -p "Git 仓库地址 [$GITHUB_REPO]: " input_repo
-    GITHUB_REPO=${input_repo:-$GITHUB_REPO}
+    # 后端镜像
+    read -p "后端镜像 [$DEFAULT_BACKEND_IMAGE]: " input_backend_image
+    BACKEND_IMAGE=${input_backend_image:-$DEFAULT_BACKEND_IMAGE}
+    
+    # 前端镜像
+    read -p "前端镜像 [$DEFAULT_FRONTEND_IMAGE]: " input_frontend_image
+    FRONTEND_IMAGE=${input_frontend_image:-$DEFAULT_FRONTEND_IMAGE}
+    
+    # 服务器模式
+    read -p "服务器模式 [release]: " input_server_mode
+    SERVER_MODE=${input_server_mode:-release}
     
     print_info "配置摘要:"
     echo "  安装目录: $INSTALL_DIR"
     echo "  数据库密码: $DB_PASSWORD"
     echo "  JWT 密钥: $JWT_SECRET"
     echo "  服务器端口: $SERVER_PORT"
-    echo "  Git 仓库: $GITHUB_REPO"
+    echo "  后端镜像: $BACKEND_IMAGE"
+    echo "  前端镜像: $FRONTEND_IMAGE"
+    echo "  服务器模式: $SERVER_MODE"
     
     read -p "确认配置? (y/n): " -n 1 -r
     echo
@@ -175,7 +189,7 @@ install_project() {
     mkdir -p $BACKUP_DIR/uploads
     mkdir -p $BACKUP_DIR/configs
     
-    # 克隆项目
+    # 克隆项目代码（仅用于获取配置文件）
     print_info "克隆项目代码..."
     if [ -d "$INSTALL_DIR/.git" ]; then
         print_info "项目已存在，拉取最新代码..."
@@ -199,25 +213,29 @@ REDIS_PASSWORD=
 JWT_SECRET=$JWT_SECRET
 REFRESH_SECRET=$JWT_SECRET-refresh
 
-SERVER_MODE=release
+SERVER_MODE=$SERVER_MODE
 SERVER_PORT=$SERVER_PORT
+
+BACKEND_IMAGE=$BACKEND_IMAGE
+FRONTEND_IMAGE=$FRONTEND_IMAGE
 
 STORAGE_TYPE=local
 
 LOG_LEVEL=info
 EOF
     
-    # 修改 docker-compose 配置
+    # 修改 docker-compose 配置以使用环境变量
     print_info "修改 Docker Compose 配置..."
-    sed -i "s|8080:8080|$SERVER_PORT:8080|g" $INSTALL_DIR/docker/docker-compose.1panel.yml
+    sed -i "s|${SERVER_PORT:-8080}:8080|$SERVER_PORT:8080|g" $INSTALL_DIR/docker/docker-compose.1panel.yml
     
-    # 构建镜像
-    print_info "构建 Docker 镜像..."
-    cd $INSTALL_DIR
-    docker-compose -f docker/docker-compose.1panel.yml build
+    # 拉取预构建镜像
+    print_info "拉取预构建的Docker镜像..."
+    docker pull $BACKEND_IMAGE
+    docker pull $FRONTEND_IMAGE
     
     # 启动服务
     print_info "启动服务..."
+    cd $INSTALL_DIR
     docker-compose -f docker/docker-compose.1panel.yml up -d
     
     # 等待服务启动
@@ -267,10 +285,16 @@ show_info() {
     
     echo "UpdateHub 已成功安装！"
     echo ""
+    echo "部署方式: 使用预构建Docker镜像 (CI/CD)"
+    echo ""
     echo "访问地址:"
     echo "  前端: http://$(hostname -I | awk '{print $1}')"
     echo "  后端: http://$(hostname -I | awk '{print $1}'):$SERVER_PORT"
     echo "  健康检查: http://$(hostname -I | awk '{print $1}'):$SERVER_PORT/health"
+    echo ""
+    echo "使用的镜像:"
+    echo "  后端: $BACKEND_IMAGE"
+    echo "  前端: $FRONTEND_IMAGE"
     echo ""
     echo "默认账户:"
     echo "  用户名: admin"
@@ -283,6 +307,7 @@ show_info() {
     echo "  停止服务: docker-compose -f $INSTALL_DIR/docker/docker-compose.1panel.yml down"
     echo "  启动服务: docker-compose -f $INSTALL_DIR/docker/docker-compose.1panel.yml up -d"
     echo "  重启服务: docker-compose -f $INSTALL_DIR/docker/docker-compose.1panel.yml restart"
+    echo "  更新镜像: docker pull $BACKEND_IMAGE && docker pull $FRONTEND_IMAGE"
     echo ""
     echo "项目目录: $INSTALL_DIR"
     echo "备份目录: $BACKUP_DIR"
@@ -293,7 +318,7 @@ show_info() {
 ################################################################################
 
 main() {
-    print_header "UpdateHub 一键部署脚本"
+    print_header "UpdateHub 一键部署脚本 (CI/CD版本)"
     
     # 检查环境
     check_environment

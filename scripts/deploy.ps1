@@ -1,6 +1,6 @@
 ################################################################################
-# UpdateHub 一键部署脚本 (Windows PowerShell 版本)
-# 适用于 Windows 开发环境
+# UpdateHub 一键部署脚本 (Windows PowerShell 版本 - CI/CD版本)
+# 使用预构建的Docker镜像，避免在服务器端构建
 ################################################################################
 
 # 错误处理
@@ -11,6 +11,10 @@ $PROJECT_NAME = "UpdateHub"
 $INSTALL_DIR = "Y:\sourcecode\UpdateHub"
 $BACKUP_DIR = "$INSTALL_DIR\backups"
 $GITHUB_REPO = "https://github.com/your-username/UpdateHub.git"
+
+# 镜像配置（GitHub Container Registry）
+$DEFAULT_BACKEND_IMAGE = "ghcr.io/your-username/updatehub-backend:latest"
+$DEFAULT_FRONTEND_IMAGE = "ghcr.io/your-username/updatehub-frontend:latest"
 
 # 默认配置
 $DEFAULT_DB_PASSWORD = "updatehub"
@@ -124,16 +128,26 @@ function Get-UserInput {
     $inputPort = Read-Host "服务器端口 [$DEFAULT_SERVER_PORT]"
     if ($inputPort) { $SERVER_PORT = $inputPort } else { $SERVER_PORT = $DEFAULT_SERVER_PORT }
     
-    # 仓库地址
-    $inputRepo = Read-Host "Git 仓库地址 [$GITHUB_REPO]"
-    if ($inputRepo) { $GITHUB_REPO = $inputRepo }
+    # 后端镜像
+    $inputBackendImage = Read-Host "后端镜像 [$DEFAULT_BACKEND_IMAGE]"
+    if ($inputBackendImage) { $BACKEND_IMAGE = $inputBackendImage } else { $BACKEND_IMAGE = $DEFAULT_BACKEND_IMAGE }
+    
+    # 前端镜像
+    $inputFrontendImage = Read-Host "前端镜像 [$DEFAULT_FRONTEND_IMAGE]"
+    if ($inputFrontendImage) { $FRONTEND_IMAGE = $inputFrontendImage } else { $FRONTEND_IMAGE = $DEFAULT_FRONTEND_IMAGE }
+    
+    # 服务器模式
+    $inputServerMode = Read-Host "服务器模式 [release]"
+    if ($inputServerMode) { $SERVER_MODE = $inputServerMode } else { $SERVER_MODE = "release" }
     
     Print-Info "配置摘要:"
     Write-Host "  安装目录: $INSTALL_DIR"
     Write-Host "  数据库密码: $DB_PASSWORD"
     Write-Host "  JWT 密钥: $JWT_SECRET"
     Write-Host "  服务器端口: $SERVER_PORT"
-    Write-Host "  Git 仓库: $GITHUB_REPO"
+    Write-Host "  后端镜像: $BACKEND_IMAGE"
+    Write-Host "  前端镜像: $FRONTEND_IMAGE"
+    Write-Host "  服务器模式: $SERVER_MODE"
     
     $confirm = Read-Host "确认配置? (y/n)"
     if ($confirm -ne "y") {
@@ -162,7 +176,7 @@ function Install-Project {
         New-Item -ItemType Directory -Path "$BACKUP_DIR\configs" -Force
     }
     
-    # 克隆项目
+    # 克隆项目代码（仅用于获取配置文件）
     Print-Info "克隆项目代码..."
     if (Test-Path "$INSTALL_DIR\.git") {
         Print-Info "项目已存在，拉取最新代码..."
@@ -186,8 +200,11 @@ REDIS_PASSWORD=
 JWT_SECRET=$JWT_SECRET
 REFRESH_SECRET=$JWT_SECRET-refresh
 
-SERVER_MODE=debug
+SERVER_MODE=$SERVER_MODE
 SERVER_PORT=$SERVER_PORT
+
+BACKEND_IMAGE=$BACKEND_IMAGE
+FRONTEND_IMAGE=$FRONTEND_IMAGE
 
 STORAGE_TYPE=local
 
@@ -196,12 +213,14 @@ LOG_LEVEL=info
     
     $envContent | Out-File -FilePath "$INSTALL_DIR\docker\.env" -Encoding utf8
     
-    # 构建镜像
-    Print-Info "构建 Docker 镜像..."
-    docker-compose -f docker/docker-compose.1panel.yml build
+    # 拉取预构建镜像
+    Print-Info "拉取预构建的Docker镜像..."
+    docker pull $BACKEND_IMAGE
+    docker pull $FRONTEND_IMAGE
     
     # 启动服务
     Print-Info "启动服务..."
+    Set-Location $INSTALL_DIR
     docker-compose -f docker/docker-compose.1panel.yml up -d
     
     # 等待服务启动
@@ -233,7 +252,7 @@ function Verify-Installation {
             return $false
         }
     } catch {
-        Print-Error "后端服务异常: $($_.Exception.Message)"
+        Print-Error "后端服务异常"
         return $false
     }
     
@@ -263,10 +282,16 @@ function Show-Info {
     
     Write-Host "UpdateHub 已成功安装！" -ForegroundColor Green
     Write-Host ""
+    Write-Host "部署方式: 使用预构建Docker镜像 (CI/CD)" -ForegroundColor Green
+    Write-Host ""
     Write-Host "访问地址:"
     Write-Host "  前端: http://localhost"
     Write-Host "  后端: http://localhost:$SERVER_PORT"
     Write-Host "  健康检查: http://localhost:$SERVER_PORT/health"
+    Write-Host ""
+    Write-Host "使用的镜像:"
+    Write-Host "  后端: $BACKEND_IMAGE"
+    Write-Host "  前端: $FRONTEND_IMAGE"
     Write-Host ""
     Write-Host "默认账户:"
     Write-Host "  用户名: admin"
@@ -279,6 +304,7 @@ function Show-Info {
     Write-Host "  停止服务: docker-compose -f docker\docker-compose.1panel.yml down"
     Write-Host "  启动服务: docker-compose -f docker\docker-compose.1panel.yml up -d"
     Write-Host "  重启服务: docker-compose -f docker\docker-compose.1panel.yml restart"
+    Write-Host "  更新镜像: docker pull $BACKEND_IMAGE && docker pull $FRONTEND_IMAGE"
     Write-Host ""
     Write-Host "项目目录: $INSTALL_DIR"
     Write-Host "备份目录: $BACKUP_DIR"
@@ -289,7 +315,7 @@ function Show-Info {
 ################################################################################
 
 function Main {
-    Print-Header "UpdateHub 一键部署脚本 (Windows)"
+    Print-Header "UpdateHub 一键部署脚本 (Windows CI/CD版本)"
     
     # 检查环境
     Check-Environment

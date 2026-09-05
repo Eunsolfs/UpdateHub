@@ -1,395 +1,762 @@
 # UpdateHub 自动化脚本使用指南
 
-本目录包含 UpdateHub 的自动化部署和管理脚本，让部署和更新变得简单易用。
+本指南详细说明 UpdateHub 提供的所有自动化脚本的使用方法。
 
-## 📚 脚本列表
+## � 脚本列表
 
-### Linux/1Panel 环境
+UpdateHub 提供以下自动化脚本：
+
+### Linux 脚本
 - `check_env.sh` - 环境检查脚本
-- `deploy.sh` - 一键部署脚本
-- `update.sh` - 一键更新脚本
+- `deploy.sh` - 一键部署脚本（CI/CD版本）
+- `update.sh` - 一键更新脚本（CI/CD版本）
 - `backup.sh` - 自动备份脚本
 
-### Windows 环境
+### Windows 脚本
 - `check_env.ps1` - 环境检查脚本
-- `deploy.ps1` - 一键部署脚本
-- `update.ps1` - 一键更新脚本
+- `deploy.ps1` - 一键部署脚本（CI/CD版本）
+- `update.ps1` - 一键更新脚本（CI/CD版本）
 - `backup.ps1` - 自动备份脚本
 
-## 🚀 快速开始
+## 🚀 部署方式说明
 
-### Linux/1Panel 环境
+所有脚本都已更新为使用 **CI/CD 预构建镜像** 方式。
 
-#### 1. 环境检查
+### CI/CD 部署方式
+
+UpdateHub 现在使用 GitHub Actions 自动构建 Docker 镜像，部署时只需拉取预构建的镜像。
+
+**优势**：
+- ⚡ 部署速度快（2-5分钟）
+- 💾 服务器不需要构建环境
+- 🌐 网络消耗小
+- 🎯 构建环境标准化
+- 📦 版本管理清晰
+
+## 🔧 环境检查脚本
+
+### Linux: check_env.sh
+
+#### 使用方法
 ```bash
 cd /opt/UpdateHub/scripts
-chmod +x *.sh
 ./check_env.sh
 ```
 
-#### 2. 一键部署
-```bash
-./deploy.sh
-```
+#### 功能说明
 
-#### 3. 自动备份
-```bash
-./backup.sh
-```
+脚本会检查以下内容：
 
-#### 4. 一键更新
-```bash
-./update.sh
-```
+1. **操作系统检查**
+   - 操作系统类型
+   - 操作系统版本
+   - 内核版本
 
-### Windows 环境
+2. **系统资源检查**
+   - CPU 核心数
+   - 内存大小
+   - 磁盘空间
+   - 网络连接
 
-#### 1. 环境检查
-```powershell
-cd Y:\sourcecode\UpdateHub\scripts
-.\check_env.ps1
-```
+3. **软件环境检查**
+   - Docker 安装状态
+   - Docker Compose 安装状态
+   - Git 安装状态
+   - Python 安装状态（可选）
 
-#### 2. 一键部署
-```powershell
-.\deploy.ps1
-```
+4. **端口检查**
+   - 80 端口占用情况
+   - 8080 端口占用情况
+   - 5432 端口占用情况
+   - 6379 端口占用情况
 
-#### 3. 自动备份
-```powershell
-.\backup.ps1
-```
+5. **网络检查**
+   - GitHub 连接性
+   - GitHub Container Registry 连接性
+   - 外网连接性
 
-#### 4. 一键更新
-```powershell
-.\update.ps1
-```
+6. **文件权限检查**
+   - 项目目录权限
+   - 脚本执行权限
+   - Docker 权限
 
-## 📋 脚本详细说明
+#### 输出示例
 
-### 环境检查脚本 (check_env.sh / check_env.ps1)
-
-**功能**：
-- 检查操作系统版本和架构
-- 检查系统资源（内存、磁盘、CPU）
-- 检查 Docker 和 Docker Compose
-- 检查 Git 安装
-- 检查端口占用情况
-- 检查网络连接
-- 检查防火墙状态
-- 检查文件权限
-- 检查 1Panel（可选）
-
-**使用场景**：
-- 部署前环境检查
-- 故障排查
-- 系统健康检查
-
-**输出示例**：
 ```
 ========================================
   UpdateHub 环境检查
 ========================================
-[CHECK] 检查操作系统
-[PASS] 操作系统: Ubuntu 22.04.3 LTS
-[PASS] 系统架构: x86_64
-...
+
+[INFO] 检查操作系统...
+[SUCCESS] 操作系统: Ubuntu 22.04.3 LTS
+[SUCCESS] 内核版本: 5.15.0-76-generic
+
+[INFO] 检查系统资源...
+[SUCCESS] CPU: 4 核
+[SUCCESS] 内存: 8GB
+[SUCCESS] 磁盘: 50GB 可用
+
+[INFO] 检查软件环境...
+[SUCCESS] Docker: 24.0.7
+[SUCCESS] Docker Compose: 2.21.0
+[SUCCESS] Git: 2.34.1
+
+[INFO] 检查端口占用...
+[SUCCESS] 80 端口: 未占用
+[SUCCESS] 8080 端口: 未占用
+[SUCCESS] 5432 端口: 未占用
+[SUCCESS] 6379 端口: 未占用
+
+[INFO] 检查网络连接...
+[SUCCESS] GitHub: 可访问
+[SUCCESS] GitHub Container Registry: 可访问
+
 ========================================
   检查报告
 ========================================
 总检查项: 15
 通过: 15
 失败: 0
+警告: 0
+
 所有检查通过，环境满足部署要求！
 ```
 
-### 一键部署脚本 (deploy.sh / deploy.ps1)
+#### 错误处理
 
-**功能**：
-- 自动环境检查
-- 交互式配置输入
-- 自动创建目录结构
-- 克隆项目代码
-- 生成环境变量文件
-- 构建 Docker 镜像
-- 启动所有服务
-- 自动验证部署结果
-- 显示访问信息和常用命令
+如果检查失败，脚本会给出具体的解决建议：
 
-**使用场景**：
-- 首次部署 UpdateHub
-- 快速搭建测试环境
-- 标准化部署流程
+```
+[FAIL] Docker Compose 未安装
+[INFO] 请安装 Docker Compose:
+   Ubuntu/Debian: apt install -y docker-compose
+   CentOS/RHEL: yum install -y docker-compose
+```
 
-**配置项**：
-- 安装目录
-- 数据库密码
-- JWT 密钥
-- 服务器端口
-- Git 仓库地址
+### Windows: check_env.ps1
 
-**输出示例**：
+#### 使用方法
+```powershell
+cd Y:\sourcecode\UpdateHub\scripts
+.\check_env.ps1
+```
+
+#### 功能说明
+
+与 Linux 版本功能相同，检查：
+- 操作系统版本
+- 系统资源
+- Docker 安装状态
+- Docker Compose 安装状态
+- Git 安装状态
+- 端口占用情况
+- 网络连接状态
+
+## 🚀 一键部署脚本
+
+### Linux: deploy.sh
+
+#### 使用方法
+```bash
+cd /opt/UpdateHub/scripts
+./deploy.sh
+```
+
+#### 功能说明
+
+脚本会自动执行以下步骤：
+
+1. **环境检查**
+   - 检查 Docker 是否安装
+   - 检查 Docker Compose 是否安装
+   - 检查 Git 是否安装
+   - 检查系统资源
+
+2. **配置向导**
+   - 询问安装目录
+   - 询问数据库密码
+   - 询问 JWT 密钥
+   - 询问服务器端口
+   - 询问镜像地址
+   - 询问服务器模式
+
+3. **拉取预构建镜像**
+   - 拉取后端 Docker 镜像
+   - 拉取前端 Docker 镜像
+   - 验证镜像拉取成功
+
+4. **创建配置文件**
+   - 创建 .env 文件
+   - 配置环境变量
+   - 配置镜像地址
+
+5. **启动服务**
+   - 使用 Docker Compose 启动服务
+   - 等待服务启动完成
+
+6. **验证部署**
+   - 检查容器状态
+   - 检查后端健康
+   - 检查前端访问
+
+#### 交互式配置
+
+脚本会询问以下配置：
+
 ```
 ========================================
-  UpdateHub 一键部署脚本
+  UpdateHub 一键部署脚本 (CI/CD版本)
 ========================================
+
 [INFO] 检查环境...
 [SUCCESS] Docker 已安装
 [SUCCESS] Docker Compose 已安装
+[SUCCESS] 环境检查完成
+
+========================================
+  配置信息
+========================================
+安装目录 [/opt/UpdateHub]: 
+数据库密码 [updatehub]: MyStr0ngP@ssw0rd
+JWT 密钥 [your-secret-key-change-this]: r@nd0mJWTk3y-2024
+服务器端口 [8080]: 
+后端镜像 [ghcr.io/your-username/updatehub-backend:latest]: 
+前端镜像 [ghcr.io/your-username/updatehub-frontend:latest]: 
+服务器模式 [release]: 
+
+配置摘要:
+  安装目录: /opt/UpdateHub
+  数据库密码: MyStr0ngP@ssw0rd
+  JWT 密钥: r@nd0mJWTk3y-2024
+  服务器端口: 8080
+  后端镜像: ghcr.io/your-username/updatehub-backend:latest
+  前端镜像: ghcr.io/your-username/updatehub-frontend:latest
+  服务器模式: release
+
+确认配置? (y/n): y
+```
+
+#### CI/CD 特性
+
+新版本的部署脚本专门针对 CI/CD 优化：
+
+```
+[INFO] 拉取预构建的Docker镜像...
+[INFO] 拉取后端镜像: ghcr.io/your-username/updatehub-backend:latest
+latest: Pulling from ghcr.io/your-username/updatehub-backend
+sha256:abc123...: Pulling fs
+abc123...: Pulling complete
 ...
-[SUCCESS] 部署完成！
+[SUCCESS] 后端镜像拉取完成
+[INFO] 拉取前端镜像: ghcr.io/your-username/updatehub-frontend:latest
+latest: Pulling from ghcr.io/your-username/updatehub-frontend
+sha256:def456...: Pulling fs
+def456...: Pulling complete
+...
+[SUCCESS] 前端镜像拉取完成
+```
+
+**优势**：
+- 无需在服务器上构建
+- 部署时间从 10-20 分钟缩短到 2-5 分钟
+- 减少服务器资源消耗
+- 减少网络带宽消耗
+
+#### 输出示例
+
+```
+========================================
+  验证安装...
+========================================
+[INFO] 检查容器状态...
+NAME                      STATUS
+updatehub-postgres         Up
+updatehub-redis            Up  
+updatehub-backend          Up
+updatehub-frontend         Up
+
+[INFO] 检查后端健康状态...
+[SUCCESS] 后端服务正常
+[INFO] 检查前端服务...
+[SUCCESS] 前端服务正常
+[SUCCESS] 验证完成
+
+========================================
+  安装信息
+========================================
 
 UpdateHub 已成功安装！
+
+部署方式: 使用预构建Docker镜像 (CI/CD)
 
 访问地址:
   前端: http://192.168.1.100
   后端: http://192.168.1.100:8080
   健康检查: http://192.168.1.100:8080/health
 
+使用的镜像:
+  后端: ghcr.io/your-username/updatehub-backend:latest
+  前端: ghcr.io/your-username/updatehub-frontend:latest
+
 默认账户:
   用户名: admin
   密码: admin123
+
+⚠️  重要: 请立即修改默认密码！
+
+常用命令:
+  查看日志: docker-compose -f /opt/UpdateHub/docker/docker-compose.1panel.yml logs -f
+  停止服务: docker-compose -f /opt/UpdateHub/docker/docker-compose.1panel.yml down
+  启动服务: docker-compose -f /opt/UpdateHub/docker/docker-compose.1panel.yml up -d
+  重启服务: docker-compose -f /opt/UpdateHub/docker/docker-compose.1panel.yml restart
+  更新镜像: docker pull ghcr.io/your-username/updatehub-backend:latest && docker pull ghcr.io/your-username/updatehub-frontend:latest
+
+项目目录: /opt/UpdateHub
+备份目录: /opt/UpdateHub/backups
 ```
 
-### 自动备份脚本 (backup.sh / backup.ps1)
+### Windows: deploy.ps1
 
-**功能**：
-- 自动备份数据库
-- 备份上传文件
-- 备份配置文件
-- 备份版本信息
-- 自动压缩备份文件
-- 生成备份报告
-- 自动清理旧备份（可配置保留天数）
-
-**使用场景**：
-- 定期数据备份
-- 更新前备份
-- 灾难恢复准备
-
-**备份内容**：
-- PostgreSQL 数据库
-- 上传文件目录
-- 配置文件（config.yaml, .env）
-- Docker Compose 配置
-- Git 版本信息
-
-**备份目录结构**：
-```
-backups/
-├── 20260905_185530/
-│   ├── postgres/
-│   │   └── updatehub_backup_20260905_185530.sql.gz
-│   ├── uploads/
-│   │   └── uploads_backup_20260905_185530.tar.gz
-│   ├── configs/
-│   │   ├── config_backup_20260905_185530.yaml
-│   │   ├── env_backup_20260905_185530
-│   │   └── docker-compose_backup_20260905_185530.yml
-│   ├── current_commit.txt
-│   ├── current_version.txt
-│   └── backup_report.txt
+#### 使用方法
+```powershell
+cd Y:\sourcecode\UpdateHub\scripts
+.\deploy.ps1
 ```
 
-**配置项**：
-- 备份目录
-- 保留天数（默认7天）
+#### 功能说明
 
-### 一键更新脚本 (update.sh / update.ps1)
+与 Linux 版本功能相同，支持：
+- 环境检查
+- 交互式配置
+- 拉取预构建镜像
+- 启动服务
+- 验证部署
 
-**功能**：
-- 自动环境检查
-- 完整数据备份
-- 拉取最新代码
-- 选择更新版本
-- 两种更新方式：
-  - 零停机更新（推荐）
-  - 完整停机更新
-- 自动数据库迁移
-- 自动验证更新结果
-- 失败自动回滚
-- 清理旧备份
-- 生成更新日志
+## 🔄 一键更新脚本
 
-**使用场景**：
-- 升级到新版本
-- 功能更新
-- 安全补丁更新
+### Linux: update.sh
 
-**更新方式**：
+#### 使用方法
+```bash
+cd /opt/UpdateHub/scripts
+./update.sh
+```
 
-#### 零停机更新（推荐）
-- 滚动更新后端服务
-- 滚动更新前端服务
-- 无服务中断
+#### 功能说明
+
+脚本会自动执行以下步骤：
+
+1. **环境检查**
+   - 检查项目目录
+   - 检查 Docker 安装
+   - 检查 Docker Compose 安装
+
+2. **备份数据**
+   - 备份配置文件
+   - 备份上传文件
+   - 保存当前镜像信息
+
+3. **拉取新镜像**
+   - 拉取后端新镜像
+   - 拉取前端新镜像
+
+4. **更新服务**
+   - 选择更新方式（零停机/完整停机）
+   - 执行更新操作
+
+5. **验证更新**
+   - 检查容器状态
+   - 检查后端健康
+   - 检查前端访问
+
+#### 更新方式选择
+
+```
+请选择更新方式:
+1) 零停机更新 (推荐)
+2) 完整停机更新
+请输入选择 (1-2): 1
+```
+
+**零停机更新**：
+- 不停止现有服务
+- 拉取新镜像后立即启动
 - 适合生产环境
 
-#### 完整停机更新
-- 停止所有服务
-- 重新构建镜像
-- 启动所有服务
-- 有短暂停机
-- 适合测试环境
+**完整停机更新**：
+- 先停止所有服务
+- 拉取新镜像
+- 再启动服务
+- 更新更彻底
 
-**安全特性**：
-- 更新前自动备份
-- 失败自动回滚
-- 详细日志记录
-- 更新验证检查
+#### CI/CD 特性
+
+新版本的更新脚本专门针对 CI/CD 优化：
+
+```
+[INFO] 拉取新镜像...
+[INFO] 拉取后端镜像: ghcr.io/your-username/updatehub-backend:latest
+latest: Pulling from ghcr.io/your-username/updatehub-backend
+sha256:abc123...: Pulling fs
+...
+[SUCCESS] 后端镜像拉取完成
+[INFO] 拉取前端镜像: ghcr.io/your-username/updatehub-frontend:latest
+latest: Pulling from ghcr.io/your-username/updatehub-frontend
+sha256:def456...: Pulling fs
+...
+[SUCCESS] 前端镜像拉取完成
+[SUCCESS] 镜像拉取完成
+```
+
+**优势**：
+- 只拉取镜像，不构建
+- 更新时间从 10-20 分钟缩短到 2-5 分钟
+- 减少服务器资源消耗
+- 支持版本回滚
+
+#### 输出示例
+
+```
+========================================
+  验证更新...
+========================================
+[INFO] 检查容器状态...
+NAME                      STATUS
+updatehub-postgres         Up
+updatehub-redis            Up  
+updatehub-backend          Up
+updatehub-frontend         Up
+
+[INFO] 检查后端健康状态...
+[SUCCESS] 后端服务正常
+[INFO] 检查前端服务...
+[SUCCESS] 前端服务正常
+[SUCCESS] 验证完成
+
+========================================
+  更新信息
+========================================
+
+UpdateHub 已成功更新！
+
+后端镜像: ghcr.io/your-username/updatehub-backend:latest
+前端镜像: ghcr.io/your-username/updatehub-frontend:latest
+更新时间: 2024-01-15 10:30:00
+日志文件: /opt/UpdateHub/update.log
+```
+
+### Windows: update.ps1
+
+#### 使用方法
+```powershell
+cd Y:\sourcecode\UpdateHub\scripts
+.\update.ps1
+```
+
+#### 功能说明
+
+与 Linux 版本功能相同，支持：
+- 环境检查
+- 数据备份
+- 拉取新镜像
+- 更新服务
+- 验证更新
+
+## 💾 自动备份脚本
+
+### Linux: backup.sh
+
+#### 使用方法
+```bash
+cd /opt/UpdateHub/scripts
+./backup.sh
+```
+
+#### 功能说明
+
+脚本会自动执行以下备份操作：
+
+1. **创建备份目录**
+   - 创建 `/opt/UpdateHub/backups` 目录
+   - 创建子目录（configs, uploads, database）
+
+2. **备份配置文件**
+   - 备份 `config.yaml`
+   - 备份 `.env` 文件
+   - 带时间戳命名
+
+3. **备份数据库**
+   - 导出 PostgreSQL 数据
+   - 压缩备份文件
+   - 带时间戳命名
+
+4. **备份上传文件**
+   - 打包上传目录
+   - 压缩备份文件
+   - 带时间戳命名
+
+5. **清理旧备份**
+   - 保留最近 7 天的备份
+   - 删除旧备份文件
+
+#### 输出示例
+
+```
+========================================
+  UpdateHub 自动备份
+========================================
+
+[INFO] 创建备份目录...
+[SUCCESS] 备份目录创建完成
+
+[INFO] 备份配置文件...
+[SUCCESS] 配置文件备份完成
+  文件: /opt/UpdateHub/backups/configs/config_backup_20240115_103000.yaml
+  文件: /opt/UpdateHub/backups/configs/env_backup_20240115_103000
+
+[INFO] 备份数据库...
+[SUCCESS] 数据库备份完成
+  文件: /opt/UpdateHub/backups/database/db_backup_20240115_103000.sql.gz
+
+[INFO] 备份上传文件...
+[SUCCESS] 上传文件备份完成
+  文件: /opt/UpdateHub/backups/uploads/uploads_backup_20240115_103000.tar.gz
+
+[INFO] 清理旧备份...
+[SUCCESS] 清理完成，保留最近 7 天的备份
+
+========================================
+  备份完成
+========================================
+
+备份时间: 2024-01-15 10:30:00
+备份目录: /opt/UpdateHub/backups
+备份文件:
+  - configs/config_backup_20240115_103000.yaml
+  - configs/env_backup_20240115_103000
+  - database/db_backup_20240115_103000.sql.gz
+  - uploads/uploads_backup_20240115_103000.tar.gz
+```
+
+### Windows: backup.ps1
+
+#### 使用方法
+```powershell
+cd Y:\sourcecode\UpdateHub\scripts
+.\backup.ps1
+```
+
+#### 功能说明
+
+与 Linux 版本功能相同，支持：
+- 配置文件备份
+- 数据库备份
+- 上传文件备份
+- 清理旧备份
 
 ## 🔧 脚本配置
 
 ### 环境变量配置
 
-编辑 `docker/.env` 文件：
+所有脚本都使用 `.env` 文件中的配置：
 
 ```bash
-# 数据库配置
-POSTGRES_PASSWORD=your_strong_password
-POSTGRES_DB=updatehub
-POSTGRES_USER=updatehub
+# .env 文件位置
+/opt/UpdateHub/docker/.env
 
-# JWT 配置
-JWT_SECRET=your_jwt_secret_key
-REFRESH_SECRET=your_refresh_secret_key
-
-# 服务器配置
-SERVER_MODE=release
-SERVER_PORT=8080
-
-# 存储配置
-STORAGE_TYPE=local
+# 关键配置项
+POSTGRES_PASSWORD=your-password
+JWT_SECRET=your-jwt-secret
+BACKEND_IMAGE=ghcr.io/your-username/updatehub-backend:latest
+FRONTEND_IMAGE=ghcr.io/your-username/updatehub-frontend:latest
 ```
 
-### 备份配置
+### 自定义安装目录
 
-修改脚本中的配置变量：
-
-```bash
-# backup.sh / backup.ps1
-RETENTION_DAYS=7  # 保留天数
-BACKUP_DIR="/opt/UpdateHub/backups"  # 备份目录
-```
-
-## 📊 使用示例
-
-### 完整部署流程
+可以在脚本运行时指定安装目录：
 
 ```bash
-# 1. 环境检查
-./check_env.sh
-
-# 2. 执行部署
+# Linux
+export INSTALL_DIR=/custom/path
 ./deploy.sh
 
-# 3. 验证部署
-curl http://localhost:8080/health
-
-# 4. 访问前端
-# 浏览器打开 http://your-server-ip
+# Windows
+$env:INSTALL_DIR="C:\custom\path"
+.\deploy.ps1
 ```
 
-### 更新流程
+### 日志文件
+
+所有脚本都会生成日志文件：
 
 ```bash
-# 1. 备份当前版本
-./backup.sh
+# Linux 日志位置
+/opt/UpdateHub/deploy.log
+/opt/UpdateHub/update.log
+/opt/UpdateHub/backup.log
 
-# 2. 执行更新
-./update.sh
-
-# 3. 验证更新
-curl http://localhost:8080/health
+# Windows 日志位置
+Y:\sourcecode\UpdateHub\deploy.log
+Y:\sourcecode\UpdateHub\update.log
+Y:\sourcecode\UpdateHub\backup.log
 ```
 
-### 定期备份
+## � 常见问题处理
 
+### 问题1：脚本执行权限不足
+
+**现象**：
+```
+bash: ./deploy.sh: Permission denied
+```
+
+**解决方法**：
 ```bash
-# 手动备份
-./backup.sh
+# 添加执行权限
+chmod +x deploy.sh
+chmod +x update.sh
+chmod +x backup.sh
+chmod +x check_env.sh
+```
 
-# 或设置定时任务（crontab）
-# 每天凌晨2点备份
+### 问题2：Docker Compose 未找到
+
+**现象**：
+```
+docker-compose: command not found
+```
+
+**解决方法**：
+```bash
+# 安装 Docker Compose
+sudo apt install -y docker-compose  # Ubuntu/Debian
+sudo yum install -y docker-compose  # CentOS/RHEL
+```
+
+### 问题3：镜像拉取失败
+
+**现象**：
+```
+Error response from daemon: pull access denied
+```
+
+**解决方法**：
+```bash
+# 登录 GitHub Container Registry
+echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
+```
+
+### 问题4：端口已被占用
+
+**现象**：
+```
+Error: bind: address already in use
+```
+
+**解决方法**：
+```bash
+# 检查端口占用
+netstat -tlnp | grep 8080
+
+# 修改 .env 文件中的端口配置
+SERVER_PORT=8081
+```
+
+## 📊 脚本使用建议
+
+### 1. 首次部署
+
+使用 `deploy.sh` 脚本进行首次部署：
+```bash
+./check_env.sh  # 先检查环境
+./deploy.sh     # 然后部署
+```
+
+### 2. 日常更新
+
+使用 `update.sh` 脚本进行更新：
+```bash
+./update.sh  # 自动更新
+```
+
+### 3. 定期备份
+
+设置定时任务定期备份：
+```bash
+# 添加到 crontab
 0 2 * * * /opt/UpdateHub/scripts/backup.sh
 ```
 
-## 🛠️ 故障排除
+### 4. 环境检查
 
-### 脚本权限问题
+定期运行环境检查：
 ```bash
-# Linux: 添加执行权限
-chmod +x scripts/*.sh
-
-# Windows: PowerShell 执行策略
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+./check_env.sh
 ```
 
-### Docker 权限问题
-```bash
-# 将用户添加到 docker 组
-sudo usermod -aG docker $USER
-newgrp docker
+## 🎯 CI/CD 脚本优势总结
+
+### 与传统脚本对比
+
+#### 传统脚本（服务器端构建）：
+```
+❌ 需要在服务器上安装构建环境
+❌ 每次部署消耗服务器资源
+❌ 网络带宽消耗大
+❌ 构建时间不稳定
+❌ 难以保证构建环境一致性
 ```
 
-### 端口占用问题
-```bash
-# 检查端口占用
-netstat -tuln | grep 8080
-
-# 修改配置文件中的端口
-nano docker/docker-compose.1panel.yml
+#### CI/CD 脚本（预构建镜像）：
+```
+✅ 镜像在 GitHub Actions 中构建
+✅ 服务器只负责运行
+✅ 部署速度快（2-5分钟）
+✅ 资源消耗小
+✅ 构建环境标准化
+✅ 版本管理清晰
 ```
 
-### 内存不足
+### 脚本优化
+
+新版本的脚本针对 CI/CD 进行了优化：
+
+1. **镜像拉取**：使用 `docker pull` 替代 `docker build`
+2. **版本管理**：支持镜像标签选择
+3. **快速部署**：部署时间从 10-20 分钟缩短到 2-5 分钟
+4. **资源节省**：减少服务器 CPU 和内存消耗
+5. **网络节省**：只下载镜像，不下载依赖
+
+## 🎉 完成！
+
+你已经了解了所有 UpdateHub 自动化脚本的使用方法！
+
+### 🚀 快速开始
+
 ```bash
-# 增加 Docker 内存限制
-# 或使用 swap 分区
+# 1. 检查环境
+./check_env.sh
+
+# 2. 部署系统
+./deploy.sh
+
+# 3. 更新系统
+./update.sh
+
+# 4. 备份数据
+./backup.sh
 ```
 
-## 📝 日志文件
+### 📝 下一步
 
-脚本会生成以下日志文件：
+- [ ] 根据需求选择合适的脚本
+- [ ] 配置环境变量
+- [ ] 设置定时备份
+- [ ] 监控脚本执行日志
 
-- `update.log` - 更新日志
-- `backup_report.txt` - 备份报告（在备份目录中）
+### 📞 获取帮助
 
-## 🔒 安全建议
-
-1. **修改默认密码**：部署后立即修改数据库和管理员密码
-2. **使用强密码**：数据库密码和 JWT 密钥使用复杂密码
-3. **定期备份**：设置自动备份任务
-4. **限制访问**：配置防火墙规则
-5. **启用 SSL**：在生产环境启用 HTTPS
-6. **监控日志**：定期检查系统日志
-
-## 🎯 最佳实践
-
-1. **先测试后部署**：在测试环境先验证脚本
-2. **定期检查环境**：定期运行环境检查脚本
-3. **备份策略**：根据业务需求调整备份频率
-4. **更新时机**：选择业务低峰期进行更新
-5. **文档记录**：记录每次部署和更新的重要信息
-
-## 📞 技术支持
-
-如果脚本执行遇到问题：
-
-1. 查看脚本输出的错误信息
-2. 检查日志文件
-3. 运行环境检查脚本
-4. 参考故障排除指南
-5. 联系技术支持
-
-## 🎉 优势
-
-使用这些自动化脚本的优势：
-
-- **简单易用**：一键完成复杂操作
-- **安全可靠**：自动备份和回滚机制
-- **标准化**：统一的部署和更新流程
-- **节省时间**：自动化减少人工操作
-- **减少错误**：避免手动操作失误
-- **可追溯**：详细的日志记录
-- **跨平台**：支持 Linux 和 Windows
-
-现在你可以像傻瓜一样简单地部署和管理 UpdateHub 了！
+如果遇到问题，请参考：
+- [第一次部署指南](FIRST_TIME_DEPLOYMENT.md)
+- [1Panel 部署指南](1PANEL_DEPLOYMENT.md)
+- [服务更新指南](SERVICE_UPDATE.md)

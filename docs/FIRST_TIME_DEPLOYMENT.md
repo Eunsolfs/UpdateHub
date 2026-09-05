@@ -8,6 +8,24 @@
 - 不熟悉 Docker 和 Linux 命令的用户
 - 希望在 1Panel 环境中部署的用户
 
+## � 新的部署方式 (CI/CD)
+
+UpdateHub 现在使用现代化的 CI/CD 部署方式：
+
+### �📋 部署方式对比
+
+#### ❌ 旧方式（服务器端构建）
+- 服务器需要完整的构建环境
+- 每次部署消耗服务器资源
+- 网络带宽消耗大
+- 构建时间不稳定
+
+#### ✅ 新方式（预构建镜像）⭐
+- 使用 GitHub Actions 自动构建镜像
+- 服务器只负责运行，不负责构建
+- 网络消耗小（只拉取镜像）
+- 部署速度快且稳定
+
 ## 📋 部署前准备
 
 ### 1. 服务器要求
@@ -22,7 +40,8 @@
 - **操作系统**: Linux (Ubuntu 20.04+, CentOS 7+, Debian 10+)
 - **1Panel**: 已安装并正常运行
 - **Docker**: 1Panel会自动安装
-- **网络**: 能访问GitHub（用于下载代码）
+- **Docker Compose**: 需要单独安装
+- **网络**: 能访问GitHub（用于拉取镜像）
 
 ### 2. 准备工作清单
 
@@ -33,6 +52,7 @@
 - [ ] 服务器网络连接正常
 - [ ] 服务器磁盘空间充足
 - [ ] 已准备好访问 1Panel 的密码
+- [ ] **GitHub Container Registry访问权限**（重要）
 
 ## 🚀 完整部署步骤
 
@@ -69,22 +89,39 @@ apt update && apt upgrade -y
 yum update -y
 ```
 
-#### 2.2 安装Git
+#### 2.2 安装Docker Compose（重要！）
 ```bash
 # Ubuntu/Debian
-apt install -y git
+apt install -y docker-compose
 
 # CentOS/RHEL
-yum install -y git
+yum install -y docker-compose
+
+# 或使用官方安装脚本
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-#### 2.3 验证Git安装
+#### 2.3 验证安装
 ```bash
-git --version
-# 应该显示类似：git version 2.x.x
+# 验证Docker
+docker --version
+
+# 验证Docker Compose
+docker-compose --version
+
+# 应该显示版本信息
 ```
 
-### 第三步：获取UpdateHub代码
+#### 2.4 启用GitHub Container Registry访问
+```bash
+# 登录GitHub Container Registry（如果是私有仓库）
+echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
+
+# 对于公开仓库，可能不需要登录
+```
+
+### 第三步：获取项目代码
 
 #### 3.1 创建项目目录
 ```bash
@@ -108,7 +145,7 @@ cd UpdateHub
 ls -la
 
 # 应该看到以下目录：
-# backend/  frontend/  docker/  docs/  scripts/
+# backend/  frontend/  docker/  docs/  scripts/  .github/
 ```
 
 ### 第四步：准备自动化脚本
@@ -130,8 +167,8 @@ ls -la
 
 # 应该看到：
 # check_env.sh    # 环境检查脚本
-# deploy.sh       # 一键部署脚本
-# update.sh       # 一键更新脚本
+# deploy.sh       # 一键部署脚本 (CI/CD版本)
+# update.sh       # 一键更新脚本 (CI/CD版本)
 # backup.sh       # 自动备份脚本
 ```
 
@@ -189,7 +226,7 @@ ls -la
 
 ```
 ========================================
-  UpdateHub 一键部署脚本
+  UpdateHub 一键部署脚本 (CI/CD版本)
 ========================================
 [INFO] 检查环境...
 [SUCCESS] Docker 已安装
@@ -234,12 +271,28 @@ JWT 密钥 [your-secret-key-change-this]:
 - **自定义**: 如果8080端口被占用，可以输入其他端口
 
 ```
-Git 仓库地址 [https://github.com/your-username/UpdateHub.git]: 
+后端镜像 [ghcr.io/your-username/updatehub-backend:latest]: 
 ```
 
-**问题5：Git仓库地址**
-- **推荐**: 直接按回车（使用项目中的地址）
-- **自定义**: 如果有其他仓库地址，可以输入
+**问题5：后端镜像地址**
+- **推荐**: 直接按回车（使用官方预构建镜像）
+- **自定义**: 如果有自定义镜像，可以输入完整地址
+
+```
+前端镜像 [ghcr.io/your-username/updatehub-frontend:latest]: 
+```
+
+**问题6：前端镜像地址**
+- **推荐**: 直接按回车（使用官方预构建镜像）
+- **自定义**: 如果有自定义镜像，可以输入完整地址
+
+```
+服务器模式 [release]: 
+```
+
+**问题7：服务器模式**
+- **推荐**: 直接按回车（使用 `release` 生产模式）
+- **自定义**: 测试环境可以使用 `debug` 模式
 
 ```
 配置摘要:
@@ -247,12 +300,14 @@ Git 仓库地址 [https://github.com/your-username/UpdateHub.git]:
   数据库密码: MyStr0ngP@ssw0rd
   JWT 密钥: r@nd0mJWTk3y-2024
   服务器端口: 8080
-  Git 仓库: https://github.com/your-username/UpdateHub.git
+  后端镜像: ghcr.io/your-username/updatehub-backend:latest
+  前端镜像: ghcr.io/your-username/updatehub-frontend:latest
+  服务器模式: release
 
 确认配置? (y/n): 
 ```
 
-**问题6：确认配置**
+**问题8：确认配置**
 - **输入**: `y` 确认配置
 - **输入**: `n` 重新配置
 
@@ -267,28 +322,30 @@ Git 仓库地址 [https://github.com/your-username/UpdateHub.git]:
 [SUCCESS] 项目代码克隆完成
 [INFO] 创建环境变量文件...
 [SUCCESS] 环境变量文件创建完成
-[INFO] 修改 Docker Compose 配置...
-[SUCCESS] Docker Compose 配置修改完成
-[INFO] 构建 Docker 镜像...
+[INFO] 拉取预构建的Docker镜像...
 ```
 
-这个过程可能需要5-15分钟，取决于你的网络速度和服务器性能。
+新版本的优势：
+- ⚡ **速度快**：只需拉取镜像，无需构建
+- 💾 **省资源**：服务器不消耗CPU和内存构建
+- 🌐 **省网络**：只下载镜像，不下载依赖
+- 🎯 **一致性好**：所有环境使用相同的镜像
+
+这个过程通常只需要2-5分钟，取决于你的网络速度。
 
 #### 6.4 查看安装进度
 
 在安装过程中，你会看到类似这样的输出：
 
 ```
-Step 1/8 : FROM golang:1.21-alpine
- ---> abc123def456
-Step 2/8 : WORKDIR /app
- ---> Running in 789012345678
- ---> removed intermediate container 789012345678
- ---> fed456cba789
+[INFO] 拉取预构建的Docker镜像...
+latest: Pulling from ghcr.io/your-username/updatehub-backend
+sha256:abc123...: Pulling fs
+abc123...: Pulling complete
 ...
 ```
 
-这是正常的Docker镜像构建过程，请耐心等待。
+这是正常的Docker镜像拉取过程，请耐心等待。
 
 ### 第七步：验证部署结果
 
@@ -325,10 +382,16 @@ updatehub-frontend         Up
 
 UpdateHub 已成功安装！
 
+部署方式: 使用预构建Docker镜像 (CI/CD)
+
 访问地址:
   前端: http://192.168.1.100
   后端: http://192.168.1.100:8080
   健康检查: http://192.168.1.100:8080/health
+
+使用的镜像:
+  后端: ghcr.io/your-username/updatehub-backend:latest
+  前端: ghcr.io/your-username/updatehub-frontend:latest
 
 默认账户:
   用户名: admin
@@ -341,6 +404,7 @@ UpdateHub 已成功安装！
   停止服务: docker-compose -f /opt/UpdateHub/docker/docker-compose.1panel.yml down
   启动服务: docker-compose -f /opt/UpdateHub/docker/docker-compose.1panel.yml up -d
   重启服务: docker-compose -f /opt/UpdateHub/docker/docker-compose.1panel.yml restart
+  更新镜像: docker pull ghcr.io/your-username/updatehub-backend:latest && docker pull ghcr.io/your-username/updatehub-frontend:latest
 
 项目目录: /opt/UpdateHub
 备份目录: /opt/UpdateHub/backups
@@ -356,6 +420,8 @@ UpdateHub 已成功安装！
 JWT 密钥: r@nd0mJWTk3y-2024
 前端地址: http://your-server-ip
 后端地址: http://your-server-ip:8080
+后端镜像: ghcr.io/your-username/updatehub-backend:latest
+前端镜像: ghcr.io/your-username/updatehub-frontend:latest
 默认账户: admin / admin123
 ```
 
@@ -426,13 +492,13 @@ http://your-server-ip
 
 #### 10.2 测试版本发布
 
-1. 选择刚创建的软件
+1. 选择刚创建的 software
 2. 点击 **发布版本**
 3. 填写版本信息：
    - 版本号: `1.0.0`
    - 发布说明: `第一个版本`
 4. 上传一个测试文件
-5. 点击 **发布**
+5. 点击 **发布`
 
 #### 10.3 测试API接口
 
@@ -451,75 +517,96 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
   -d '{"username":"admin","password":"your-new-password"}'
 ```
 
+## 🔧 CI/CD 部署的优势
+
+### 与传统方式对比
+
+#### 传统部署方式：
+```
+❌ 每次部署需要在服务器上构建
+❌ 构建过程消耗服务器资源
+❌ 网络带宽消耗大
+❌ 构建时间不稳定
+❌ 难以保证构建环境一致性
+```
+
+#### CI/CD部署方式：
+```
+✅ 镜像在GitHub Actions中构建
+✅ 服务器只负责运行
+✅ 部署速度快（2-5分钟）
+✅ 资源消耗小
+✅ 构建环境标准化
+✅ 版本管理清晰
+```
+
+### 镜像版本管理
+
+#### 镜像标签说明：
+- `latest` - 最新版本
+- `v1.0.0` - 具体版本号
+- `v1.1.0` - 其他版本
+
+#### 更新镜像：
+```bash
+# 拉取最新版本镜像
+docker pull ghcr.io/your-username/updatehub-backend:latest
+docker pull ghcr.io/your-username/updatehub-frontend:latest
+
+# 拉取特定版本镜像
+docker pull ghcr.io/your-username/updatehub-backend:v1.0.0
+docker pull ghcr.io/your-username/updatehub-frontend:v1.0.0
+```
+
 ## 🔧 常见问题处理
 
-### 问题1：端口占用
+### 问题1：Docker Compose 未安装
 
 **现象**：
 ```
-[WARNING] 端口 8080 已被占用
+[FAIL] Docker Compose 未安装
 ```
 
 **解决方法**：
 ```bash
-# 查看端口占用
-netstat -tuln | grep 8080
+# 安装 Docker Compose
+sudo apt install -y docker-compose  # Ubuntu/Debian
+sudo yum install -y docker-compose  # CentOS/RHEL
 
-# 如果被占用，在脚本中选择其他端口
-# 或者停止占用端口的服务
+# 验证安装
+docker-compose --version
 ```
 
-### 问题2：Docker未安装
+### 问题2：无法拉取GitHub镜像
 
 **现象**：
 ```
-[ERROR] Docker 未安装
+Error response from daemon: pull access denied
 ```
 
 **解决方法**：
 ```bash
-# 安装Docker
-curl -fsSL https://get.docker.com | sh
+# 登录GitHub Container Registry
+echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
 
-# 启动Docker
-systemctl start docker
-systemctl enable docker
+# 或使用Docker Hub（如果镜像推送到Docker Hub）
+docker login
 ```
 
-### 问题3：权限不足
+### 问题3：镜像拉取速度慢
 
 **现象**：
 ```
-Permission denied
+镜像拉取时间很长
 ```
 
 **解决方法**：
 ```bash
-# 使用sudo运行脚本
-sudo ./deploy.sh
-
-# 或者将用户添加到docker组
-sudo usermod -aG docker $USER
-newgrp docker
+# 使用镜像加速器（可选）
+# 配置Docker镜像加速器
 ```
 
-### 问题4：网络连接失败
-
-**现象**：
-```
-Failed to connect to github.com
-```
-
-**解决方法**：
-```bash
-# 检查网络连接
-ping github.com
-
-# 如果无法访问GitHub，可以使用镜像
-# 或手动下载代码后上传到服务器
-```
-
-### 问题5：容器启动失败
+### 问题4：容器启动失败
 
 **现象**：
 ```
@@ -531,8 +618,11 @@ ping github.com
 # 查看容器日志
 docker logs updatehub-backend
 
-# 在1Panel中查看容器日志
-# 进入容器页面 -> 点击容器 -> 查看日志
+# 检查环境变量配置
+cat /opt/UpdateHub/docker/.env
+
+# 检查镜像是否正确拉取
+docker images | grep updatehub
 ```
 
 ## 📊 部署后维护
@@ -587,6 +677,43 @@ docker-compose -f docker/docker-compose.1panel.yml down
 #### 方法2：使用1Panel
 在1Panel中点击容器 -> 停止
 
+## 🔄 更新系统（CI/CD方式）
+
+### 更新到新版本
+
+#### 使用自动化脚本更新
+```bash
+cd /opt/UpdateHub/scripts
+./update.sh
+```
+
+脚本会自动：
+- ✅ 备份当前配置
+- ✅ 拉取新版本镜像
+- ✅ 更新服务
+- ✅ 验证更新结果
+
+#### 手动更新镜像
+```bash
+# 1. 拉取新镜像
+docker pull ghcr.io/your-username/updatehub-backend:latest
+docker pull ghcr.io/your-username/updatehub-frontend:latest
+
+# 2. 重启服务
+cd /opt/UpdateHub
+docker-compose -f docker/docker-compose.1panel.yml up -d
+```
+
+#### 使用特定版本
+```bash
+# 1. 修改 .env 文件中的镜像版本
+# BACKEND_IMAGE=ghcr.io/your-username/updatehub-backend:v1.0.0
+# FRONTEND_IMAGE=ghcr.io/your-username/updatehub-frontend:v1.0
+
+# 2. 重新启动服务
+docker-compose -f docker/docker-compose.1panel.yml up -d
+```
+
 ## 🎯 下一步操作
 
 部署完成后，建议进行以下操作：
@@ -627,9 +754,21 @@ docker-compose -f docker/docker-compose.1panel.yml down
 
 你已经成功完成了 UpdateHub 的第一次部署！
 
-现在你可以：
+### 🚀 CI/CD部署的优势
+
+现在你的系统享受以下优势：
+
+- **部署快速**：2-5分钟完成部署
+- **资源节省**：服务器不需要构建环境
+- **网络节省**：只拉取镜像，不下载依赖
+- **一致性高**：所有环境使用相同的预构建镜像
+- **版本管理**：清晰的镜像版本标签
+
+### 📝 现在你可以：
+
 - 在浏览器中访问 http://your-server-ip 使用系统
 - 在1Panel中管理Docker容器
-- 使用自动化脚本进行后续的更新和维护
+- 使用自动化脚本进行快速更新
+- 通过更改镜像版本来升级系统
 
-记住：定期更新系统和备份数据，保证系统安全稳定运行！
+记住：定期更新镜像版本，保持系统安全和功能最新！

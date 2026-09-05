@@ -1,0 +1,90 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Scripts
+scripts/
+scripts/*.sh
+scripts/*.ps1
+
+# Docker files
+docker/
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test files
+*_test.go
+test/
+tests/
+*_test.go
+coverage.out
+coverage.html
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.log
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Build artifacts (not needed in image)
+backend/updatehub-server
+frontend/dist/
+frontend/node_modules/
+backend/vendor/
+
+# Configuration files (will be mounted as volumes)
+backend/configs/
+*.env
+.env.*
+!.env.example
+
+# Upload files (will be mounted as volumes)
+backend/uploads/
+!backend/uploads/.gitkeep
+
+# Backup files
+backups/
+*.backup
+*.bak
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# SSL certificates (security)
+*.pem
+*.key
+*.crt
+*.p12
+
+# Secrets
+secrets/
+*.secret
+passwords/

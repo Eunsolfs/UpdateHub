@@ -1,561 +1,646 @@
-# UpdateHub 服务更新教程
+# UpdateHub 服务更新完整指南
 
-本教程将指导您如何将 UpdateHub 服务端程序更新到最新版本。
+本指南详细说明如何更新 UpdateHub 系统，使用预构建的 Docker 镜像（CI/CD 方式）。
+
+## 🎯 更新方式说明
+
+### CI/CD 更新方式
+
+UpdateHub 现在使用 GitHub Actions 自动构建 Docker 镜像，更新时只需拉取新版本的预构建镜像。
+
+**更新流程**：
+```
+GitHub 发布新版本
+    ↓
+GitHub Actions 自动构建镜像
+    ↓
+镜像推送到 GitHub Container Registry
+    ↓
+服务器拉取新镜像
+    ↓
+重启服务使用新镜像
+```
+
+**优势**：
+- ⚡ 更新速度快（2-5分钟）
+- 💾 服务器不需要构建环境
+- 🌐 网络消耗小
+- 🎯 构建环境标准化
+- 📦 版本管理清晰
+- 🔄 支持版本回滚
 
 ## 📋 更新前准备
 
 ### 1. 检查当前版本
-```bash
-# 查看当前运行的版本
-docker exec -it updatehub-backend ./updatehub-server version
 
-# 或查看 git 标签
-cd /opt/UpdateHub
-git describe --tags
+#### 查看当前运行的镜像
+```bash
+docker images | grep updatehub
+
+# 输出示例：
+# ghcr.io/your-username/updatehub-backend   latest    abc123    2 days ago   150MB
+# ghcr.io/your-username/updatehub-frontend  latest    def456    2 days ago   50MB
 ```
 
-### 2. 使用自动化脚本备份（推荐）⭐
+#### 查看当前容器状态
+```bash
+cd /opt/UpdateHub
+docker-compose -f docker/docker-compose.1panel.yml ps
+```
 
+#### 查看当前配置
+```bash
+cat /opt/UpdateHub/docker/.env
+```
+
+### 2. 备份数据
+
+#### 使用自动化脚本备份
 ```bash
 cd /opt/UpdateHub/scripts
 ./backup.sh
 ```
 
-自动化备份脚本会自动：
-- ✅ 备份数据库
-- ✅ 备份上传文件
-- ✅ 备份配置文件
-- ✅ 备份版本信息
-- ✅ 生成备份报告
-- ✅ 自动清理旧备份
+#### 手动备份
 
-### 3. 手动备份
-
-如果您需要手动备份，请参考以下步骤。
-
-#### 2.1 备份数据库
+**备份数据库**：
 ```bash
-# 备份 PostgreSQL 数据库
-docker exec updatehub-postgres pg_dump -U updatehub updatehub > updatehub_backup_$(date +%Y%m%d_%H%M%S).sql
-
-# 备份到安全位置
-cp updatehub_backup_*.sql /backup/
+# 备份 PostgreSQL 数据
+docker exec updatehub-postgres pg_dump -U updatehub updatehub > /opt/UpdateHub/backups/db_backup_$(date +%Y%m%d).sql
 ```
 
-#### 2.2 备份上传文件
+**备份上传文件**：
 ```bash
-# 备份上传的文件
-tar -czf uploads_backup_$(date +%Y%m%d_%H%M%S).tar.gz /opt/UpdateHub/backend/uploads
-
-# 备份到安全位置
-cp uploads_backup_*.tar.gz /backup/
+# 备份上传文件
+tar -czf /opt/UpdateHub/backups/uploads_backup_$(date +%Y%m%d).tar.gz /opt/UpdateHub/backend/uploads
 ```
 
-#### 2.3 备份配置文件
+**备份配置文件**：
 ```bash
 # 备份配置文件
-cp /opt/UpdateHub/backend/configs/config.yaml /backup/config_backup_$(date +%Y%m%d_%H%M%S).yaml
-cp /opt/UpdateHub/docker/docker-compose.yml /backup/docker-compose_backup_$(date +%Y%m%d_%H%M%S).yml
+cp /opt/UpdateHub/docker/.env /opt/UpdateHub/backups/env_backup_$(date +%Y%m%d)
 ```
 
-#### 2.4 使用 1Panel 备份功能
-1. 进入 1Panel -> 备份
-2. 创建手动备份
-3. 选择所有相关容器和卷
-4. 执行备份
+### 3. 确认更新方式
 
-### 4. 检查更新日志
-```bash
-# 查看最新更新内容
-cd /opt/UpdateHub
-git fetch origin
-git log origin/main --oneline -10
+选择更新方式：
 
-# 查看版本更新说明
-git tag -l --sort=-version:refname | head -5
-```
+- **方案A：自动化脚本更新**（推荐）- 最简单，全自动
+- **方案B：手动更新** - 更灵活，适合高级用户
+- **方案C：特定版本更新** - 更新到指定版本
+- **方案D：版本回滚** - 回退到之前版本
 
-### 5. 准备回滚方案
-```bash
-# 保存当前 git commit ID
-cd /opt/UpdateHub
-git rev-parse HEAD > /backup/current_commit.txt
+## 🚀 方案A：自动化脚本更新（推荐）
 
-# 记录当前运行的容器镜像
-docker images | grep updatehub > /backup/current_images.txt
-```
+### 使用一键更新脚本
 
-## 🚀 更新方式
-
-### 方式一：使用自动化脚本（推荐）⭐
-
-这是最简单的方式，只需运行一个脚本即可完成所有更新步骤。
-
-#### 1. 环境检查
+#### 1. 运行更新脚本
 ```bash
 cd /opt/UpdateHub/scripts
-./check_env.sh
-```
-
-#### 2. 一键更新
-```bash
 ./update.sh
 ```
 
-脚本会自动：
-- ✅ 检查环境依赖
-- ✅ 自动备份数据
-- ✅ 拉取最新代码
-- ✅ 选择更新版本
-- ✅ 执行零停机更新
-- ✅ 自动数据库迁移
-- ✅ 验证更新结果
-- ✅ 失败自动回滚
-- ✅ 清理旧备份
+#### 2. 脚本执行流程
 
-#### 3. 更新方式选择
+脚本会自动执行以下步骤：
 
-脚本会询问选择更新方式：
 ```
+========================================
+  UpdateHub 一键更新脚本 (CI/CD版本)
+========================================
+
+[INFO] 检查环境...
+[SUCCESS] Docker 已安装
+[SUCCESS] Docker Compose 已安装
+[SUCCESS] 项目目录存在
+[SUCCESS] 环境检查完成
+
+[INFO] 备份数据...
+[INFO] 备份配置文件...
+[SUCCESS] 配置文件备份完成
+[INFO] 备份上传文件...
+[SUCCESS] 上传文件备份完成
+[INFO] 保存当前镜像信息...
+[SUCCESS] 镜像信息保存完成
+[SUCCESS] 数据备份完成
+
+[INFO] 拉取新镜像...
+[INFO] 拉取后端镜像: ghcr.io/your-username/updatehub-backend:latest
+latest: Pulling from ghcr.io/your-username/updatehub-backend
+sha256:abc123...: Pulling fs
+...
+[SUCCESS] 后端镜像拉取完成
+[INFO] 拉取前端镜像: ghcr.io/your-username/updatehub-frontend:latest
+latest: Pulling from ghcr.io/your-username/updatehub-frontend
+sha256:def456...: Pulling fs
+...
+[SUCCESS] 前端镜像拉取完成
+[SUCCESS] 镜像拉取完成
+
 请选择更新方式:
 1) 零停机更新 (推荐)
 2) 完整停机更新
+请输入选择 (1-2): 1
+
+[INFO] 执行零停机更新...
+[INFO] 拉取镜像...
+Pulling backend ...
+latest: Pulled
+Pulling frontend ...
+latest: Pulled
+[INFO] 启动服务...
+Creating updatehub-backend ... done
+Creating updatehub-frontend ... done
+[SUCCESS] 服务更新完成
+
+[INFO] 等待服务启动...
+[SUCCESS] 服务启动完成
+
+[INFO] 检查容器状态...
+NAME                      STATUS
+updatehub-postgres         Up
+updatehub-redis            Up  
+updatehub-backend          Up
+updatehub-frontend         Up
+[SUCCESS] 容器状态正常
+
+[INFO] 检查后端健康状态...
+[SUCCESS] 后端服务正常
+
+[INFO] 检查前端服务...
+[SUCCESS] 前端服务正常
+[SUCCESS] 验证完成
+
+========================================
+  更新信息
+========================================
+
+UpdateHub 已成功更新！
+
+后端镜像: ghcr.io/your-username/updatehub-backend:latest
+前端镜像: ghcr.io/your-username/updatehub-frontend:latest
+更新时间: 2024-01-15 10:30:00
+日志文件: /opt/UpdateHub/update.log
 ```
 
-**零停机更新**（推荐）：
-- 滚动更新后端服务
-- 滚动更新前端服务
-- 无服务中断
+#### 3. 更新方式选择
+
+**零停机更新（推荐）**：
+- 不停止现有服务
+- 拉取新镜像后立即启动
 - 适合生产环境
+- 有短暂的服务重叠
 
 **完整停机更新**：
-- 停止所有服务
-- 重新构建镜像
-- 启动所有服务
-- 有短暂停机
-- 适合测试环境
+- 先停止所有服务
+- 拉取新镜像
+- 再启动服务
+- 有短暂的服务中断
+- 更新更彻底
 
-### 方式二：手动更新
+## 🚀 方案B：手动更新
 
-如果您需要更多控制，可以选择手动更新。
+### 手动更新到最新版本
 
-#### 方法一：零停机更新（推荐）
+#### 1. 拉取新镜像
+```bash
+# 拉取后端镜像
+docker pull ghcr.io/your-username/updatehub-backend:latest
 
-##### 1.1 准备新版本
+# 拉取前端镜像
+docker pull ghcr.io/your-username/updatehub-frontend:latest
+```
+
+#### 2. 查看新镜像
+```bash
+docker images | grep updatehub
+
+# 应该看到新的镜像
+```
+
+#### 3. 停止旧服务
 ```bash
 cd /opt/UpdateHub
-
-# 拉取最新代码
-git fetch origin
-git checkout origin/main
-
-# 或者切换到特定版本标签
-git checkout v1.2.0
+docker-compose -f docker/docker-compose.1panel.yml down
 ```
 
-##### 1.2 构建新版本镜像
+#### 4. 启动新服务
 ```bash
-# 构建新的镜像（不停止现有服务）
-docker-compose -f docker/docker-compose.1panel.yml build backend
-docker-compose -f docker/docker-compose.1panel.yml build frontend
+docker-compose -f docker/docker-compose.1panel.yml up -d
 ```
 
-##### 1.3 滚动更新后端
+#### 5. 验证更新
 ```bash
-# 停止旧的后端容器
-docker-compose -f docker/docker-compose.1panel.yml stop backend
+# 检查容器状态
+docker-compose -f docker/docker-compose.1panel.yml ps
 
-# 启动新的后端容器
-docker-compose -f docker/docker-compose.1panel.yml up -d backend
-
-# 等待后端启动
-sleep 10
-
-# 检查后端状态
-docker-compose -f docker/docker-compose.1panel.yml ps backend
+# 检查后端健康
 curl http://localhost:8080/health
-```
 
-##### 1.4 滚动更新前端
-```bash
-# 停止旧的前端容器
-docker-compose -f docker/docker-compose.1panel.yml stop frontend
-
-# 启动新的前端容器
-docker-compose -f docker/docker-compose.1panel.yml up -d frontend
-
-# 检查前端状态
-docker-compose -f docker/docker-compose.1panel.yml ps frontend
+# 检查前端访问
 curl http://localhost/
 ```
 
-##### 1.5 执行数据库迁移（如果需要）
+## 🚀 方案C：更新到特定版本
+
+### 更新到指定版本
+
+#### 1. 确定目标版本
+
+查看可用的版本标签：
 ```bash
-# 检查是否有新的迁移文件
-ls -la /opt/UpdateHub/backend/migrations/
+# 查看后端版本标签
+docker pull ghcr.io/your-username/updatehub-backend
 
-# 如果有迁移，执行迁移
-docker exec -it updatehub-backend ./updatehub-server migrate
-
-# 或者直接在数据库中执行 SQL 脚本
-docker exec -i updatehub-postgres psql -U updatehub -d updatehub < /opt/UpdateHub/backend/migrations/upgrade_v1.2.0.sql
+# 查看前端版本标签
+docker pull ghcr.io/your-username/updatehub-frontend
 ```
 
-#### 方法二：完整停机更新
+#### 2. 修改 .env 文件
 
-##### 2.1 停止所有服务
+编辑 `/opt/UpdateHub/docker/.env`：
+
+```bash
+# 修改镜像版本
+BACKEND_IMAGE=ghcr.io/your-username/updatehub-backend:v1.0.0
+FRONTEND_IMAGE=ghcr.io/your-username/updatehub-frontend:v1.0.0
+```
+
+#### 3. 拉取指定版本镜像
+```bash
+docker pull ghcr.io/your-username/updatehub-backend:v1.0.0
+docker pull ghcr.io/your-username/updatehub-frontend:v1.0.0
+```
+
+#### 4. 重启服务
 ```bash
 cd /opt/UpdateHub
-docker-compose -f docker/docker-compose.1panel.yml down
-```
-
-##### 2.2 拉取最新代码
-```bash
-cd /opt/UpdateHub
-git fetch origin
-git checkout origin/main
-
-# 或者切换到特定版本
-git checkout v1.2.0
-```
-
-##### 2.3 重新构建所有镜像
-```bash
-docker-compose -f docker/docker-compose.1panel.yml build --no-cache
-```
-
-##### 2.4 启动所有服务
-```bash
 docker-compose -f docker/docker-compose.1panel.yml up -d
 ```
 
-##### 2.5 检查服务状态
+#### 5. 验证版本
 ```bash
-# 查看所有容器状态
+# 查看运行的镜像
+docker ps | grep updatehub
+
+# 确认使用的是正确的版本
+```
+
+## 🚀 方案D：版本回滚
+
+### 回退到之前的版本
+
+#### 1. 查看历史镜像
+```bash
+docker images | grep updatehub
+
+# 输出示例：
+# ghcr.io/your-username/updatehub-backend   v1.0.0    abc123    5 days ago   150MB
+# ghcr.io/your-username/updatehub-backend   v0.9.0     def456    10 days ago  145MB
+# ghcr.io/your-username/updatehub-backend   latest     ghi789    2 days ago   150MB
+```
+
+#### 2. 修改 .env 文件
+
+编辑 `/opt/UpdateHub/docker/.env`：
+
+```bash
+# 回退到之前的版本
+BACKEND_IMAGE=ghcr.io/your-username/updatehub-backend:v0.9.0
+FRONTEND_IMAGE=ghcr.io/your-username/updatehub-frontend:v0.9.0
+```
+
+#### 3. 拉取目标版本镜像（如果已存在可跳过）
+```bash
+docker pull ghcr.io/your-username/updatehub-backend:v0.9.0
+docker pull ghcr.io/your-username/updatehub-frontend:v0.9.0
+```
+
+#### 4. 重启服务
+```bash
+cd /opt/UpdateHub
+docker-compose -f docker/docker-compose.1panel.yml up -d
+```
+
+#### 5. 验证回滚
+```bash
+# 检查容器状态
 docker-compose -f docker/docker-compose.1panel.yml ps
 
-# 查看服务日志
-docker-compose -f docker/docker-compose.1panel.yml logs -f
+# 检查后端健康
+curl http://localhost:8080/health
+
+# 确认功能正常
 ```
 
-##### 2.6 执行数据库迁移
+## 🔧 更新后验证
+
+### 1. 检查容器状态
 ```bash
-# 执行数据库迁移
-docker exec -it updatehub-backend ./updatehub-server migrate
-```
-
-### 方法三：使用 1Panel 界面更新
-
-#### 3.1 更新代码
-1. 进入 1Panel -> 文件管理
-2. 进入 `/opt/UpdateHub` 目录
-3. 使用内置的 Git 工具拉取最新代码
-4. 或手动上传新版本文件
-
-#### 3.2 重新构建镜像
-1. 进入 1Panel -> 容器
-2. 停止 UpdateHub 相关容器
-3. 删除旧镜像
-4. 使用 Docker Compose 重新构建
-
-#### 3.3 启动新服务
-1. 启动所有 UpdateHub 容器
-2. 检查容器状态
-3. 查看日志确认正常
-
-## 🔍 更新后验证
-
-### 1. 检查服务状态
-```bash
-# 检查所有容器
+cd /opt/UpdateHub
 docker-compose -f docker/docker-compose.1panel.yml ps
-
-# 应该看到所有容器都是 "Up" 状态
 ```
 
-### 2. 验证前端访问
+所有容器应该显示为 **Up** 状态。
+
+### 2. 检查后端健康
 ```bash
-# 访问前端
-curl -I http://your-server-ip
+curl http://localhost:8080/health
 
-# 应该返回 200 OK
+# 应该返回：
+# {"message":"UpdateHub server is running","status":"ok"}
 ```
 
-### 3. 验证后端 API
+### 3. 检查前端访问
 ```bash
-# 测试健康检查
-curl http://your-server-ip:8080/health
+curl http://localhost/
 
-# 测试登录 API
-curl -X POST http://your-server-ip:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"your_password"}'
+# 应该返回 HTML 内容
 ```
 
-### 4. 验证数据库连接
-```bash
-# 测试数据库连接
-docker exec -it updatehub-postgres psql -U updatehub -d updatehub -c "SELECT version();"
-```
-
-### 5. 验证新功能
-```bash
-# 测试新添加的功能
-# 根据更新日志测试具体的新功能
-```
-
-### 6. 检查日志
+### 4. 检查服务日志
 ```bash
 # 查看后端日志
-docker logs updatehub-backend
+docker-compose -f docker/docker-compose.1panel.yml logs -f backend
 
 # 查看前端日志
-docker logs updatehub-frontend
-
-# 查看数据库日志
-docker logs updatehub-postgres
+docker-compose -f docker/docker-compose.1panel.yml logs -f frontend
 ```
 
-## 🔄 回滚方案
+### 5. 功能测试
 
-### 如果更新失败，按以下步骤回滚
+在浏览器中访问前端界面：
+```
+http://your-server-ip
+```
 
-#### 1. 停止当前服务
+测试基本功能：
+- 登录
+- 软件管理
+- 版本发布
+- 用户管理
+
+## 🔧 在 1Panel 中更新
+
+### 1. 登录 1Panel
+
+在浏览器中访问：
+```
+http://your-server-ip:10086
+```
+
+### 2. 查看当前容器
+
+进入 **容器** 页面，查看当前的 UpdateHub 容器。
+
+### 3. 更新容器
+
+#### 方法1：删除并重新创建（推荐）
+
+1. 停止容器：
+   - 选择容器
+   - 点击 **停止**
+
+2. 删除容器（保留数据卷）：
+   - 选择容器
+   - 点击 **删除**
+   - **重要**：勾选 "保留数据卷"
+
+3. SSH 登录服务器
+
+4. 拉取新镜像：
+   ```bash
+   docker pull ghcr.io/your-username/updatehub-backend:latest
+   docker pull ghcr.io/your-username/updatehub-frontend:latest
+   ```
+
+5. 重新启动服务：
+   ```bash
+   cd /opt/UpdateHub
+   docker-compose -f docker/docker-compose.1panel.yml up -d
+   ```
+
+#### 方法2：使用 Docker Compose 更新
+
+直接在服务器上使用 Docker Compose 更新，1Panel 会自动同步容器状态。
+
+## 🔧 常见问题处理
+
+### 问题1：镜像拉取失败
+
+**现象**：
+```
+Error response from daemon: pull access denied
+```
+
+**解决方法**：
 ```bash
-cd /opt/UpdateHub
-docker-compose -f docker/docker-compose.1panel.yml down
+# 登录 GitHub Container Registry
+echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
+
+# 重新拉取镜像
+docker pull ghcr.io/your-username/updatehub-backend:latest
 ```
 
-#### 2. 恢复之前的代码版本
-```bash
-cd /opt/UpdateHub
-git checkout $(cat /backup/current_commit.txt)
+### 问题2：更新后服务无法启动
+
+**现象**：
+```
+容器启动后立即退出
 ```
 
-#### 3. 恢复配置文件
-```bash
-cp /backup/config_backup_*.yaml /opt/UpdateHub/backend/configs/config.yaml
-cp /backup/docker-compose_backup_*.yml /opt/UpdateHub/docker/docker-compose.yml
-```
-
-#### 4. 恢复数据库（如果需要）
-```bash
-# 恢复数据库备份
-docker exec -i updatehub-postgres psql -U updatehub -d updatehub < /backup/updatehub_backup_YYYYMMDD_HHMMSS.sql
-```
-
-#### 5. 恢复上传文件（如果需要）
-```bash
-# 恢复上传文件
-tar -xzf /backup/uploads_backup_YYYYMMDD_HHMMSS.tar.gz -C /
-```
-
-#### 6. 重新构建和启动
-```bash
-cd /opt/UpdateHub
-docker-compose -f docker/docker-compose.1panel.yml build
-docker-compose -f docker/docker-compose.1panel.yml up -d
-```
-
-#### 7. 验证回滚
-```bash
-# 检查服务状态
-docker-compose -f docker/docker-compose.1panel.yml ps
-
-# 验证功能正常
-curl http://your-server-ip:8080/health
-```
-
-## 📊 更新最佳实践
-
-### 1. 定期更新
-- 建议每月检查一次更新
-- 优先更新安全补丁
-- 在测试环境先测试新版本
-
-### 2. 更新时间选择
-- 选择业务低峰期进行更新
-- 避免在工作时间进行重大更新
-- 提前通知用户维护时间
-
-### 3. 监控更新过程
-- 实时监控日志输出
-- 关注错误和警告信息
-- 准备快速回滚方案
-
-### 4. 记录更新过程
-```bash
-# 创建更新日志
-echo "Update to v1.2.0 on $(date)" >> /opt/UpdateHub/update.log
-echo "Backup completed" >> /opt/UpdateHub/update.log
-echo "Migration executed" >> /opt/UpdateHub/update.log
-echo "Update completed successfully" >> /opt/UpdateHub/update.log
-```
-
-## 🔧 常见更新问题
-
-### 1. 数据库迁移失败
-```bash
-# 检查迁移文件
-ls -la /opt/UpdateHub/backend/migrations/
-
-# 手动执行 SQL
-docker exec -i updatehub-postgres psql -U updatehub -d updatehub < migration_file.sql
-
-# 检查数据库状态
-docker exec -it updatehub-postgres psql -U updatehub -d updatehub
-```
-
-### 2. 容器启动失败
+**解决方法**：
 ```bash
 # 查看容器日志
 docker logs updatehub-backend
 
-# 检查配置文件
-cat /opt/UpdateHub/backend/configs/config.yaml
+# 检查环境变量配置
+cat /opt/UpdateHub/docker/.env
 
-# 检查端口占用
-netstat -tulpn | grep 8080
+# 检查镜像是否正确拉取
+docker images | grep updatehub
+
+# 如果问题持续，回滚到之前的版本
 ```
 
-### 3. 前端显示异常
+### 问题3：更新后数据丢失
+
+**现象**：
+```
+更新后发现数据丢失
+```
+
+**解决方法**：
 ```bash
-# 清除浏览器缓存
-# 检查 nginx 配置
-docker exec -it updatehub-frontend cat /etc/nginx/nginx.conf
+# 检查数据卷是否保留
+docker volume ls | grep updatehub
 
-# 重新构建前端
-docker-compose -f docker/docker-compose.1panel.yml build frontend
-docker-compose -f docker/docker-compose.1panel.yml up -d frontend
+# 恢复备份数据
+cd /opt/UpdateHub/backups
+# 恢复数据库
+docker exec -i updatehub-postgres psql -U updatehub updatehub < db_backup_YYYYMMDD.sql
+# 恢复上传文件
+tar -xzf uploads_backup_YYYYMMDD.tar.gz -C /
 ```
 
-### 4. 依赖冲突
+### 问题4：更新后功能异常
+
+**现象**：
+```
+更新后某些功能无法正常使用
+```
+
+**解决方法**：
 ```bash
-# 清理 Docker 缓存
-docker system prune -a
+# 检查后端日志
+docker logs updatehub-backend
 
-# 重新构建
-docker-compose -f docker/docker-compose.1panel.yml build --no-cache
+# 检查数据库迁移
+# 进入后端容器
+docker exec -it updatehub-backend /bin/sh
+# 检查数据库表结构
+sqlite3 /app/data/updatehub.db ".schema"
+
+# 如果是数据库结构变化，可能需要手动迁移
 ```
 
-## 📝 更新检查清单
+### 问题5：镜像拉取速度慢
 
-更新前：
-- [ ] 已备份数据库
-- [ ] 已备份上传文件
-- [ ] 已备份配置文件
-- [ ] 已检查更新日志
-- [ ] 已准备回滚方案
-- [ ] 已通知用户维护时间
-- [ ] 已选择合适的更新时间
+**现象**：
+```
+镜像拉取时间很长
+```
 
-更新中：
-- [ ] 已停止旧服务
-- [ ] 已拉取最新代码
-- [ ] 已重新构建镜像
-- [ ] 已启动新服务
-- [ ] 已执行数据库迁移
-- [ ] 已检查服务状态
-
-更新后：
-- [ ] 所有容器正常运行
-- [ ] 前端访问正常
-- [ ] 后端 API 响应正常
-- [ ] 数据库连接正常
-- [ ] 新功能测试通过
-- [ ] 日志无错误信息
-- [ ] 性能指标正常
-- [ ] 已记录更新日志
-
-## 🎯 自动化脚本管理
-
-### 环境检查
+**解决方法**：
 ```bash
-cd /opt/UpdateHub/scripts
-./check_env.sh
+# 使用镜像加速器（可选）
+# 配置 Docker 镜像加速器
+
+# 或使用后台拉取
+docker pull ghcr.io/your-username/updatehub-backend:latest &
+docker pull ghcr.io/your-username/updatehub-frontend:latest &
 ```
 
-### 自动备份
-```bash
-cd /opt/UpdateHub/scripts
-./backup.sh
+## 📊 更新策略建议
+
+### 1. 测试环境先行
+
+在生产环境更新前，先在测试环境更新：
+- 在测试环境拉取新镜像
+- 运行完整的功能测试
+- 确认无问题后再更新生产环境
+
+### 2. 维护窗口
+
+选择业务低峰期进行更新：
+- 通常在凌晨或周末
+- 提前通知用户
+- 准备回滚方案
+
+### 3. 滚动更新
+
+对于多实例部署，使用滚动更新：
+- 逐个更新实例
+- 保持服务可用性
+- 减少对用户的影响
+
+### 4. 监控告警
+
+更新后加强监控：
+- 监控服务健康状态
+- 监控错误日志
+- 监控性能指标
+- 设置告警规则
+
+## 🔄 更新流程总结
+
+### 标准更新流程
+
+```
+1. 备份数据
+   ↓
+2. 检查当前版本
+   ↓
+3. 拉取新镜像
+   ↓
+4. 停止旧服务
+   ↓
+5. 启动新服务
+   ↓
+6. 验证更新
+   ↓
+7. 监控运行
 ```
 
-### 自动更新
-```bash
-cd /opt/UpdateHub/scripts
-./update.sh
+### 快速更新流程（使用脚本）
+
+```
+1. 运行 ./update.sh
+   ↓
+2. 选择更新方式
+   ↓
+3. 等待自动完成
+   ↓
+4. 验证更新结果
 ```
 
-## 🎯 自动化更新脚本
+## 🎯 最佳实践
 
-### 创建自动化更新脚本
-```bash
-#!/bin/bash
-# update.sh - UpdateHub 自动更新脚本
+### 1. 定期更新
 
-set -e
+建议定期更新系统：
+- 跟随官方发布节奏
+- 及时获取安全修复
+- 享受新功能
 
-BACKUP_DIR="/backup"
-PROJECT_DIR="/opt/UpdateHub"
-DATE=$(date +%Y%m%d_%H%M%S)
+### 2. 版本跳跃
 
-echo "Starting UpdateHub update process..."
+不建议跳过多个版本：
+- 按顺序更新
+- 避免数据库迁移问题
+- 减少兼容性问题
 
-# 1. 备份数据
-echo "Backing up data..."
-docker exec updatehub-postgres pg_dump -U updatehub updatehub > $BACKUP_DIR/updatehub_backup_$DATE.sql
-tar -czf $BACKUP_DIR/uploads_backup_$DATE.tar.gz $PROJECT_DIR/backend/uploads
-cp $PROJECT_DIR/backend/configs/config.yaml $BACKUP_DIR/config_backup_$DATE.yaml
+### 3. 备份策略
 
-# 2. 拉取最新代码
-echo "Pulling latest code..."
-cd $PROJECT_DIR
-git fetch origin
-git checkout origin/main
+每次更新前都要备份：
+- 数据库备份
+- 文件备份
+- 配置备份
+- 保留多个备份版本
 
-# 3. 重新构建
-echo "Building new images..."
-docker-compose -f docker/docker-compose.1panel.yml build backend
-docker-compose -f docker/docker-compose.1panel.yml build frontend
+### 4. 文档记录
 
-# 4. 滚动更新
-echo "Rolling update..."
-docker-compose -f docker/docker-compose.1panel.yml stop backend
-docker-compose -f docker/docker-compose.1panel.yml up -d backend
-sleep 10
+记录每次更新：
+- 更新时间
+- 更新版本
+- 更新内容
+- 遇到的问题
+- 解决方案
 
-docker-compose -f docker/docker-compose.1panel.yml stop frontend
-docker-compose -f docker/docker-compose.1panel.yml up -d frontend
+## 🎉 完成！
 
-# 5. 执行迁移
-echo "Running migrations..."
-docker exec -it updatehub-backend ./updatehub-server migrate
+你已经了解了如何更新 UpdateHub 系统！
 
-# 6. 验证
-echo "Verifying update..."
-curl -f http://localhost:8080/health || exit 1
+### 🚀 CI/CD 更新的优势
 
-echo "Update completed successfully!"
-```
+- **更新快速**：2-5分钟完成更新
+- **资源节省**：服务器不需要构建环境
+- **网络节省**：只拉取镜像，不下载依赖
+- **一致性高**：所有环境使用相同的预构建镜像
+- **版本管理**：清晰的镜像版本标签
+- **易于回滚**：可以快速回退到之前版本
 
-### 使用自动化脚本
-```bash
-# 设置执行权限
-chmod +x update.sh
+### 📝 下一步
 
-# 执行更新
-./update.sh
-```
+- [ ] 定期检查新版本
+- [ ] 制定更新计划
+- [ ] 设置自动备份
+- [ ] 配置监控告警
+- [ ] 记录更新历史
 
-## 📞 技术支持
+### 📞 获取帮助
 
-如果更新过程中遇到问题：
-1. 查看详细的错误日志
-2. 检查备份文件是否完整
-3. 执行回滚操作
-4. 联系技术支持
-
-## 🎉 更新完成
-
-恭喜！您已成功将 UpdateHub 更新到最新版本。建议定期检查更新并及时升级以获得最新功能和安全补丁。
+如果遇到问题，请参考：
+- [第一次部署指南](FIRST_TIME_DEPLOYMENT.md)
+- [1Panel 部署指南](1PANEL_DEPLOYMENT.md)
+- [快速开始指南](QUICK_START.md)
