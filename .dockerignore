@@ -14,8 +14,6 @@ scripts/*.sh
 scripts/*.ps1
 
 # Docker files
-# Note: docker/nginx.conf is NOT ignored because Dockerfile.frontend needs it
-!docker/nginx.conf
 docker/
 Dockerfile*
 docker-compose*.yml
