@@ -1,0 +1,112 @@
+version: '3.8'
+
+# UpdateHub 1Panel 专用部署配置
+# 这个配置文件针对 1Panel 环境进行了优化
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: updatehub-postgres
+    environment:
+      POSTGRES_DB: updatehub
+      POSTGRES_USER: updatehub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-updatehub}  # 支持环境变量
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /opt/UpdateHub/backups/postgres:/backups  # 备份目录
+    ports:
+      - "5432:5432"
+    networks:
+      - updatehub-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U updatehub -d updatehub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: updatehub-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}  # 可选密码
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - updatehub-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 后端服务
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: updatehub-backend
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=updatehub
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-updatehub}
+      - DATABASE_NAME=updatehub
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-this}
+      - SERVER_MODE=release  # 生产环境使用 release 模式
+    volumes:
+      - /opt/UpdateHub/backend/uploads:/root/uploads
+      - /opt/UpdateHub/backend/configs:/root/configs
+      - /opt/UpdateHub/backups/uploads:/backups  # 备份目录
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - updatehub-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 前端服务
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: updatehub-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - updatehub-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  updatehub-network:
+    driver: bridge
