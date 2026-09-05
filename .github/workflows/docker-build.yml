@@ -33,7 +33,7 @@ jobs:
       id: meta-backend
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository_owner }}/updatehub-backend
+        images: ghcr.io/${{ toLower(github.repository_owner) }}/updatehub-backend
 
     - name: Build and push backend image
       uses: docker/build-push-action@v6
@@ -42,8 +42,8 @@ jobs:
         file: ./docker/Dockerfile.backend
         push: true
         tags: |
-          ghcr.io/${{ github.repository_owner }}/updatehub-backend:latest
-          ghcr.io/${{ github.repository_owner }}/updatehub-backend:${{ github.ref_name }}
+          ghcr.io/${{ toLower(github.repository_owner) }}/updatehub-backend:latest
+          ghcr.io/${{ toLower(github.repository_owner) }}/updatehub-backend:${{ github.ref_name }}
         labels: ${{ steps.meta-backend.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
@@ -52,7 +52,7 @@ jobs:
       id: meta-frontend
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository_owner }}/updatehub-frontend
+        images: ghcr.io/${{ toLower(github.repository_owner) }}/updatehub-frontend
 
     - name: Build and push frontend image
       uses: docker/build-push-action@v6
@@ -61,8 +61,8 @@ jobs:
         file: ./docker/Dockerfile.frontend
         push: true
         tags: |
-          ghcr.io/${{ github.repository_owner }}/updatehub-frontend:latest
-          ghcr.io/${{ github.repository_owner }}/updatehub-frontend:${{ github.ref_name }}
+          ghcr.io/${{ toLower(github.repository_owner) }}/updatehub-frontend:latest
+          ghcr.io/${{ toLower(github.repository_owner) }}/updatehub-frontend:${{ github.ref_name }}
         labels: ${{ steps.meta-frontend.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
