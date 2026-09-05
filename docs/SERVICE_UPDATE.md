@@ -14,7 +14,24 @@ cd /opt/UpdateHub
 git describe --tags
 ```
 
-### 2. 备份重要数据
+### 2. 使用自动化脚本备份（推荐）⭐
+
+```bash
+cd /opt/UpdateHub/scripts
+./backup.sh
+```
+
+自动化备份脚本会自动：
+- ✅ 备份数据库
+- ✅ 备份上传文件
+- ✅ 备份配置文件
+- ✅ 备份版本信息
+- ✅ 生成备份报告
+- ✅ 自动清理旧备份
+
+### 3. 手动备份
+
+如果您需要手动备份，请参考以下步骤。
 
 #### 2.1 备份数据库
 ```bash
@@ -47,7 +64,7 @@ cp /opt/UpdateHub/docker/docker-compose.yml /backup/docker-compose_backup_$(date
 3. 选择所有相关容器和卷
 4. 执行备份
 
-### 3. 检查更新日志
+### 4. 检查更新日志
 ```bash
 # 查看最新更新内容
 cd /opt/UpdateHub
@@ -58,7 +75,7 @@ git log origin/main --oneline -10
 git tag -l --sort=-version:refname | head -5
 ```
 
-### 4. 准备回滚方案
+### 5. 准备回滚方案
 ```bash
 # 保存当前 git commit ID
 cd /opt/UpdateHub
@@ -68,11 +85,63 @@ git rev-parse HEAD > /backup/current_commit.txt
 docker images | grep updatehub > /backup/current_images.txt
 ```
 
-## 🚀 更新步骤
+## 🚀 更新方式
 
-### 方法一：零停机更新（推荐）
+### 方式一：使用自动化脚本（推荐）⭐
 
-#### 1.1 准备新版本
+这是最简单的方式，只需运行一个脚本即可完成所有更新步骤。
+
+#### 1. 环境检查
+```bash
+cd /opt/UpdateHub/scripts
+./check_env.sh
+```
+
+#### 2. 一键更新
+```bash
+./update.sh
+```
+
+脚本会自动：
+- ✅ 检查环境依赖
+- ✅ 自动备份数据
+- ✅ 拉取最新代码
+- ✅ 选择更新版本
+- ✅ 执行零停机更新
+- ✅ 自动数据库迁移
+- ✅ 验证更新结果
+- ✅ 失败自动回滚
+- ✅ 清理旧备份
+
+#### 3. 更新方式选择
+
+脚本会询问选择更新方式：
+```
+请选择更新方式:
+1) 零停机更新 (推荐)
+2) 完整停机更新
+```
+
+**零停机更新**（推荐）：
+- 滚动更新后端服务
+- 滚动更新前端服务
+- 无服务中断
+- 适合生产环境
+
+**完整停机更新**：
+- 停止所有服务
+- 重新构建镜像
+- 启动所有服务
+- 有短暂停机
+- 适合测试环境
+
+### 方式二：手动更新
+
+如果您需要更多控制，可以选择手动更新。
+
+#### 方法一：零停机更新（推荐）
+
+##### 1.1 准备新版本
 ```bash
 cd /opt/UpdateHub
 
@@ -84,14 +153,14 @@ git checkout origin/main
 git checkout v1.2.0
 ```
 
-#### 1.2 构建新版本镜像
+##### 1.2 构建新版本镜像
 ```bash
 # 构建新的镜像（不停止现有服务）
 docker-compose -f docker/docker-compose.1panel.yml build backend
 docker-compose -f docker/docker-compose.1panel.yml build frontend
 ```
 
-#### 1.3 滚动更新后端
+##### 1.3 滚动更新后端
 ```bash
 # 停止旧的后端容器
 docker-compose -f docker/docker-compose.1panel.yml stop backend
@@ -107,7 +176,7 @@ docker-compose -f docker/docker-compose.1panel.yml ps backend
 curl http://localhost:8080/health
 ```
 
-#### 1.4 滚动更新前端
+##### 1.4 滚动更新前端
 ```bash
 # 停止旧的前端容器
 docker-compose -f docker/docker-compose.1panel.yml stop frontend
@@ -120,7 +189,7 @@ docker-compose -f docker/docker-compose.1panel.yml ps frontend
 curl http://localhost/
 ```
 
-#### 1.5 执行数据库迁移（如果需要）
+##### 1.5 执行数据库迁移（如果需要）
 ```bash
 # 检查是否有新的迁移文件
 ls -la /opt/UpdateHub/backend/migrations/
@@ -132,15 +201,15 @@ docker exec -it updatehub-backend ./updatehub-server migrate
 docker exec -i updatehub-postgres psql -U updatehub -d updatehub < /opt/UpdateHub/backend/migrations/upgrade_v1.2.0.sql
 ```
 
-### 方法二：完整停机更新
+#### 方法二：完整停机更新
 
-#### 2.1 停止所有服务
+##### 2.1 停止所有服务
 ```bash
 cd /opt/UpdateHub
 docker-compose -f docker/docker-compose.1panel.yml down
 ```
 
-#### 2.2 拉取最新代码
+##### 2.2 拉取最新代码
 ```bash
 cd /opt/UpdateHub
 git fetch origin
@@ -150,17 +219,17 @@ git checkout origin/main
 git checkout v1.2.0
 ```
 
-#### 2.3 重新构建所有镜像
+##### 2.3 重新构建所有镜像
 ```bash
 docker-compose -f docker/docker-compose.1panel.yml build --no-cache
 ```
 
-#### 2.4 启动所有服务
+##### 2.4 启动所有服务
 ```bash
 docker-compose -f docker/docker-compose.1panel.yml up -d
 ```
 
-#### 2.5 检查服务状态
+##### 2.5 检查服务状态
 ```bash
 # 查看所有容器状态
 docker-compose -f docker/docker-compose.1panel.yml ps
@@ -169,7 +238,7 @@ docker-compose -f docker/docker-compose.1panel.yml ps
 docker-compose -f docker/docker-compose.1panel.yml logs -f
 ```
 
-#### 2.6 执行数据库迁移
+##### 2.6 执行数据库迁移
 ```bash
 # 执行数据库迁移
 docker exec -it updatehub-backend ./updatehub-server migrate
@@ -199,7 +268,7 @@ docker exec -it updatehub-backend ./updatehub-server migrate
 ### 1. 检查服务状态
 ```bash
 # 检查所有容器
-docker-compose -f docker/docker-compose.yml ps
+docker-compose -f docker/docker-compose.1panel.yml ps
 
 # 应该看到所有容器都是 "Up" 状态
 ```
@@ -254,7 +323,7 @@ docker logs updatehub-postgres
 #### 1. 停止当前服务
 ```bash
 cd /opt/UpdateHub
-docker-compose -f docker/docker-compose.yml down
+docker-compose -f docker/docker-compose.1panel.yml down
 ```
 
 #### 2. 恢复之前的代码版本
@@ -284,14 +353,14 @@ tar -xzf /backup/uploads_backup_YYYYMMDD_HHMMSS.tar.gz -C /
 #### 6. 重新构建和启动
 ```bash
 cd /opt/UpdateHub
-docker-compose -f docker/docker-compose.yml build
-docker-compose -f docker/docker-compose.yml up -d
+docker-compose -f docker/docker-compose.1panel.yml build
+docker-compose -f docker/docker-compose.1panel.yml up -d
 ```
 
 #### 7. 验证回滚
 ```bash
 # 检查服务状态
-docker-compose -f docker/docker-compose.yml ps
+docker-compose -f docker/docker-compose.1panel.yml ps
 
 # 验证功能正常
 curl http://your-server-ip:8080/health
@@ -356,8 +425,8 @@ netstat -tulpn | grep 8080
 docker exec -it updatehub-frontend cat /etc/nginx/nginx.conf
 
 # 重新构建前端
-docker-compose -f docker/docker-compose.yml build frontend
-docker-compose -f docker/docker-compose.yml up -d frontend
+docker-compose -f docker/docker-compose.1panel.yml build frontend
+docker-compose -f docker/docker-compose.1panel.yml up -d frontend
 ```
 
 ### 4. 依赖冲突
@@ -366,7 +435,7 @@ docker-compose -f docker/docker-compose.yml up -d frontend
 docker system prune -a
 
 # 重新构建
-docker-compose -f docker/docker-compose.yml build --no-cache
+docker-compose -f docker/docker-compose.1panel.yml build --no-cache
 ```
 
 ## 📝 更新检查清单
@@ -397,6 +466,26 @@ docker-compose -f docker/docker-compose.yml build --no-cache
 - [ ] 日志无错误信息
 - [ ] 性能指标正常
 - [ ] 已记录更新日志
+
+## 🎯 自动化脚本管理
+
+### 环境检查
+```bash
+cd /opt/UpdateHub/scripts
+./check_env.sh
+```
+
+### 自动备份
+```bash
+cd /opt/UpdateHub/scripts
+./backup.sh
+```
+
+### 自动更新
+```bash
+cd /opt/UpdateHub/scripts
+./update.sh
+```
 
 ## 🎯 自动化更新脚本
 

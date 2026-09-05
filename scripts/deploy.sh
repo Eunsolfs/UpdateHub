@@ -1,44 +1,317 @@
 #!/bin/bash
 
-# UpdateHub 部署脚本
+################################################################################
+# UpdateHub 一键部署脚本
+# 适用于 Linux 服务器和 1Panel 环境
+################################################################################
 
-set -e
+set -e  # 遇到错误立即退出
 
-echo "开始部署 UpdateHub..."
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# 检查 Docker 是否安装
-if ! command -v docker &> /dev/null; then
-    echo "错误: Docker 未安装，请先安装 Docker"
-    exit 1
-fi
+# 配置变量
+PROJECT_NAME="UpdateHub"
+INSTALL_DIR="/opt/UpdateHub"
+BACKUP_DIR="/opt/UpdateHub/backups"
+GITHUB_REPO="https://github.com/your-username/UpdateHub.git"
 
-# 检查 Docker Compose 是否安装
-if ! command -v docker-compose &> /dev/null; then
-    echo "错误: Docker Compose 未安装，请先安装 Docker Compose"
-    exit 1
-fi
+# 默认配置
+DEFAULT_DB_PASSWORD="updatehub"
+DEFAULT_JWT_SECRET="your-secret-key-change-this"
+DEFAULT_SERVER_PORT="8080"
 
-# 进入 docker 目录
-cd "$(dirname "$0")/../docker"
+################################################################################
+# 打印函数
+################################################################################
 
-# 停止并删除旧容器
-echo "停止旧容器..."
-docker-compose down
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
 
-# 构建并启动服务
-echo "构建并启动服务..."
-docker-compose up -d
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
 
-# 等待服务启动
-echo "等待服务启动..."
-sleep 10
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
 
-# 检查服务状态
-echo "检查服务状态..."
-docker-compose ps
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
 
-echo "部署完成！"
-echo "前端访问地址: http://localhost"
-echo "后端 API 地址: http://localhost:8080"
-echo "数据库端口: 5432"
-echo "Redis 端口: 6379"
+print_header() {
+    echo -e "${GREEN}========================================${NC}"
+    echo -e "${GREEN}  $1${NC}"
+    echo -e "${GREEN}========================================${NC}"
+}
+
+################################################################################
+# 环境检查函数
+################################################################################
+
+check_environment() {
+    print_header "检查环境..."
+    
+    # 检查是否为 root 用户
+    if [ "$EUID" -ne 0 ]; then 
+        print_warning "建议使用 root 用户运行此脚本"
+        read -p "是否继续? (y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+    
+    # 检查 Docker
+    if ! command -v docker &> /dev/null; then
+        print_error "Docker 未安装，请先安装 Docker"
+        exit 1
+    fi
+    print_success "Docker 已安装"
+    
+    # 检查 Docker Compose
+    if ! command -v docker-compose &> /dev/null; then
+        print_error "Docker Compose 未安装，请先安装 Docker Compose"
+        exit 1
+    fi
+    print_success "Docker Compose 已安装"
+    
+    # 检查 Git
+    if ! command -v git &> /dev/null; then
+        print_warning "Git 未安装，尝试安装..."
+        if command -v apt-get &> /dev/null; then
+            apt-get update && apt-get install -y git
+        elif command -v yum &> /dev/null; then
+            yum install -y git
+        else
+            print_error "无法自动安装 Git，请手动安装"
+            exit 1
+        fi
+    fi
+    print_success "Git 已安装"
+    
+    # 检查端口占用
+    if netstat -tuln | grep -q ":8080 "; then
+        print_warning "端口 8080 已被占用"
+        read -p "是否继续? (y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+    
+    if netstat -tuln | grep -q ":80 "; then
+        print_warning "端口 80 已被占用"
+        read -p "是否继续? (y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+    
+    print_success "环境检查完成"
+}
+
+################################################################################
+# 用户输入函数
+################################################################################
+
+get_user_input() {
+    print_header "配置信息"
+    
+    # 项目安装目录
+    read -p "安装目录 [$INSTALL_DIR]: " input_dir
+    INSTALL_DIR=${input_dir:-$INSTALL_DIR}
+    
+    # 数据库密码
+    read -p "数据库密码 [$DEFAULT_DB_PASSWORD]: " input_db_pass
+    DB_PASSWORD=${input_db_pass:-$DEFAULT_DB_PASSWORD}
+    
+    # JWT 密钥
+    read -p "JWT 密钥 [$DEFAULT_JWT_SECRET]: " input_jwt_secret
+    JWT_SECRET=${input_jwt_secret:-$DEFAULT_JWT_SECRET}
+    
+    # 服务器端口
+    read -p "服务器端口 [$DEFAULT_SERVER_PORT]: " input_port
+    SERVER_PORT=${input_port:-$DEFAULT_SERVER_PORT}
+    
+    # 仓库地址
+    read -p "Git 仓库地址 [$GITHUB_REPO]: " input_repo
+    GITHUB_REPO=${input_repo:-$GITHUB_REPO}
+    
+    print_info "配置摘要:"
+    echo "  安装目录: $INSTALL_DIR"
+    echo "  数据库密码: $DB_PASSWORD"
+    echo "  JWT 密钥: $JWT_SECRET"
+    echo "  服务器端口: $SERVER_PORT"
+    echo "  Git 仓库: $GITHUB_REPO"
+    
+    read -p "确认配置? (y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_error "配置已取消"
+        exit 1
+    fi
+}
+
+################################################################################
+# 安装函数
+################################################################################
+
+install_project() {
+    print_header "开始安装..."
+    
+    # 创建安装目录
+    print_info "创建安装目录..."
+    mkdir -p $INSTALL_DIR
+    mkdir -p $BACKUP_DIR
+    mkdir -p $BACKUP_DIR/postgres
+    mkdir -p $BACKUP_DIR/uploads
+    mkdir -p $BACKUP_DIR/configs
+    
+    # 克隆项目
+    print_info "克隆项目代码..."
+    if [ -d "$INSTALL_DIR/.git" ]; then
+        print_info "项目已存在，拉取最新代码..."
+        cd $INSTALL_DIR
+        git pull origin main
+    else
+        git clone $GITHUB_REPO $INSTALL_DIR
+        cd $INSTALL_DIR
+    fi
+    
+    # 创建环境变量文件
+    print_info "创建环境变量文件..."
+    cat > $INSTALL_DIR/docker/.env << EOF
+# UpdateHub 环境变量配置
+POSTGRES_PASSWORD=$DB_PASSWORD
+POSTGRES_DB=updatehub
+POSTGRES_USER=updatehub
+
+REDIS_PASSWORD=
+
+JWT_SECRET=$JWT_SECRET
+REFRESH_SECRET=$JWT_SECRET-refresh
+
+SERVER_MODE=release
+SERVER_PORT=$SERVER_PORT
+
+STORAGE_TYPE=local
+
+LOG_LEVEL=info
+EOF
+    
+    # 修改 docker-compose 配置
+    print_info "修改 Docker Compose 配置..."
+    sed -i "s|8080:8080|$SERVER_PORT:8080|g" $INSTALL_DIR/docker/docker-compose.1panel.yml
+    
+    # 构建镜像
+    print_info "构建 Docker 镜像..."
+    cd $INSTALL_DIR
+    docker-compose -f docker/docker-compose.1panel.yml build
+    
+    # 启动服务
+    print_info "启动服务..."
+    docker-compose -f docker/docker-compose.1panel.yml up -d
+    
+    # 等待服务启动
+    print_info "等待服务启动..."
+    sleep 30
+    
+    print_success "安装完成"
+}
+
+################################################################################
+# 验证函数
+################################################################################
+
+verify_installation() {
+    print_header "验证安装..."
+    
+    # 检查容器状态
+    print_info "检查容器状态..."
+    docker-compose -f $INSTALL_DIR/docker/docker-compose.1panel.yml ps
+    
+    # 检查后端健康
+    print_info "检查后端健康状态..."
+    if curl -f http://localhost:$SERVER_PORT/health &> /dev/null; then
+        print_success "后端服务正常"
+    else
+        print_error "后端服务异常"
+        return 1
+    fi
+    
+    # 检查前端
+    print_info "检查前端服务..."
+    if curl -f http://localhost/ &> /dev/null; then
+        print_success "前端服务正常"
+    else
+        print_warning "前端服务可能需要更多时间启动"
+    fi
+    
+    print_success "验证完成"
+}
+
+################################################################################
+# 显示信息函数
+################################################################################
+
+show_info() {
+    print_header "安装信息"
+    
+    echo "UpdateHub 已成功安装！"
+    echo ""
+    echo "访问地址:"
+    echo "  前端: http://$(hostname -I | awk '{print $1}')"
+    echo "  后端: http://$(hostname -I | awk '{print $1}'):$SERVER_PORT"
+    echo "  健康检查: http://$(hostname -I | awk '{print $1}'):$SERVER_PORT/health"
+    echo ""
+    echo "默认账户:"
+    echo "  用户名: admin"
+    echo "  密码: admin123"
+    echo ""
+    echo "⚠️  重要: 请立即修改默认密码！"
+    echo ""
+    echo "常用命令:"
+    echo "  查看日志: docker-compose -f $INSTALL_DIR/docker/docker-compose.1panel.yml logs -f"
+    echo "  停止服务: docker-compose -f $INSTALL_DIR/docker/docker-compose.1panel.yml down"
+    echo "  启动服务: docker-compose -f $INSTALL_DIR/docker/docker-compose.1panel.yml up -d"
+    echo "  重启服务: docker-compose -f $INSTALL_DIR/docker/docker-compose.1panel.yml restart"
+    echo ""
+    echo "项目目录: $INSTALL_DIR"
+    echo "备份目录: $BACKUP_DIR"
+}
+
+################################################################################
+# 主函数
+################################################################################
+
+main() {
+    print_header "UpdateHub 一键部署脚本"
+    
+    # 检查环境
+    check_environment
+    
+    # 获取用户输入
+    get_user_input
+    
+    # 安装项目
+    install_project
+    
+    # 验证安装
+    verify_installation
+    
+    # 显示信息
+    show_info
+    
+    print_success "部署完成！"
+}
+
+# 运行主函数
+main

@@ -9,7 +9,25 @@
 
 ## 快速部署
 
-### 1. 克隆项目
+### 使用自动化脚本（推荐）⭐
+
+最简单的方式是使用自动化脚本：
+
+```bash
+# Linux/1Panel 环境
+cd /opt/UpdateHub/scripts
+chmod +x *.sh
+./check_env.sh      # 环境检查
+./deploy.sh         # 一键部署
+```
+
+脚本会自动处理所有复杂的部署步骤。
+
+### 手动部署
+
+如果您需要手动部署，请按照以下步骤。
+
+#### 1. 克隆项目
 
 ```bash
 git clone <repository-url>

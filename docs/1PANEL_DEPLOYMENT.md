@@ -15,24 +15,67 @@
 - Docker 已安装（1Panel 会自动安装）
 - 网络连接正常
 
-## 🚀 部署步骤
+## 🚀 部署方式
 
-### 第一步：准备服务器环境
+### 方式一：使用自动化脚本（推荐）⭐
 
-#### 1.1 登录 1Panel
+这是最简单的方式，只需运行一个脚本即可完成所有部署步骤。
+
+#### 1. 环境检查
+```bash
+cd /opt/UpdateHub/scripts
+chmod +x check_env.sh
+./check_env.sh
+```
+
+#### 2. 一键部署
+```bash
+./deploy.sh
+```
+
+脚本会自动：
+- ✅ 检查环境依赖
+- ✅ 交互式配置向导
+- ✅ 创建目录结构
+- ✅ 克隆项目代码
+- ✅ 生成配置文件
+- ✅ 构建 Docker 镜像
+- ✅ 启动所有服务
+- ✅ 验证部署结果
+
+#### 3. 访问系统
+部署完成后，脚本会显示访问信息：
+```
+UpdateHub 已成功安装！
+
+访问地址:
+  前端: http://your-server-ip
+  后端: http://your-server-ip:8080
+  健康检查: http://your-server-ip:8080/health
+
+默认账户:
+  用户名: admin
+  密码: admin123
+```
+
+### 方式二：手动部署
+
+如果您需要更多控制，可以选择手动部署。
+
+#### 第一步：准备服务器环境
+
+##### 1.1 登录 1Panel
 ```bash
 # 通过浏览器访问 1Panel
 http://your-server-ip:10086
 ```
 
-#### 1.2 检查系统状态
+##### 1.2 检查系统状态
 - 确认 Docker 运行正常
 - 确认有足够的磁盘空间
 - 确认网络连接正常
 
-### 第二步：获取项目代码
-
-#### 2.1 安装 Git（如果未安装）
+##### 1.3 安装 Git（如果未安装）
 ```bash
 # 在 1Panel 终端中执行
 apt update && apt install -y git
@@ -40,7 +83,9 @@ apt update && apt install -y git
 yum install -y git
 ```
 
-#### 2.2 克隆项目代码
+#### 第二步：获取项目代码
+
+##### 2.1 克隆项目代码
 ```bash
 # 在服务器上执行
 cd /opt
@@ -50,9 +95,9 @@ cd UpdateHub
 
 **注意**：请将 `https://github.com/your-username/UpdateHub.git` 替换为实际的仓库地址。
 
-### 第三步：配置环境变量
+#### 第三步：配置环境变量
 
-#### 3.1 创建环境变量文件
+##### 3.1 创建环境变量文件
 ```bash
 cd /opt/UpdateHub
 cp docker/.env.example docker/.env
@@ -72,7 +117,7 @@ JWT_SECRET=your_jwt_secret_key_change_this_in_production
 REDIS_PASSWORD=your_redis_password_here
 ```
 
-#### 3.2 使用 1Panel 专用配置
+##### 3.2 使用 1Panel 专用配置
 ```bash
 # 使用专为 1Panel 优化的配置文件
 cp docker/docker-compose.1panel.yml docker/docker-compose.yml.backup
@@ -84,7 +129,7 @@ cp docker/docker-compose.1panel.yml docker/docker-compose.yml.backup
 - 优化的备份目录
 - 生产环境模式预设
 
-### 第四步：创建必要的目录
+#### 第四步：创建必要的目录
 
 ```bash
 # 在 1Panel 文件管理中创建目录
@@ -93,58 +138,58 @@ mkdir -p /opt/UpdateHub/backend/uploads/temp
 mkdir -p /opt/UpdateHub/backend/configs
 ```
 
-### 第五步：构建和启动服务
+#### 第五步：构建和启动服务
 
-#### 5.1 使用 Docker Compose 构建
+##### 5.1 使用 Docker Compose 构建
 ```bash
 cd /opt/UpdateHub
 docker-compose -f docker/docker-compose.1panel.yml build
 ```
 
-#### 5.2 启动所有服务
+##### 5.2 启动所有服务
 ```bash
 docker-compose -f docker/docker-compose.1panel.yml up -d
 ```
 
-#### 5.3 检查服务状态
+##### 5.3 检查服务状态
 ```bash
 docker-compose -f docker/docker-compose.1panel.yml ps
 ```
 
-### 第六步：配置 Nginx 反向代理（可选）
+#### 第六步：配置 Nginx 反向代理（可选）
 
-#### 6.1 在 1Panel 中创建网站
+##### 6.1 在 1Panel 中创建网站
 1. 进入 1Panel -> 网站 -> 创建网站
 2. 选择反向代理
 3. 填写域名和端口配置
 
-#### 6.2 配置 SSL 证书（推荐）
+##### 6.2 配置 SSL 证书（推荐）
 1. 在 1Panel 中申请 Let's Encrypt 证书
 2. 启用 HTTPS
 3. 配置强制 HTTPS 重定向
 
-### 第七步：初始化数据库
+#### 第七步：初始化数据库
 
-#### 7.1 进入后端容器
+##### 7.1 进入后端容器
 ```bash
 docker exec -it updatehub-backend sh
 ```
 
-#### 7.2 执行数据库迁移
+##### 7.2 执行数据库迁移
 ```bash
 # 如果有迁移脚本
 ./updatehub-server migrate
 ```
 
-#### 7.3 创建默认管理员账户
+##### 7.3 创建默认管理员账户
 ```bash
 # 通过 API 或直接在数据库中创建
 # 默认账户：admin / admin123
 ```
 
-### 第八步：验证部署
+#### 第八步：验证部署
 
-#### 8.1 检查前端访问
+##### 8.1 检查前端访问
 ```bash
 # 访问前端
 http://your-server-ip
@@ -152,7 +197,7 @@ http://your-server-ip
 # 应该看到 UpdateHub 登录页面
 ```
 
-#### 8.2 检查后端 API
+##### 8.2 检查后端 API
 ```bash
 # 测试健康检查
 curl http://your-server-ip:8080/health
@@ -161,7 +206,7 @@ curl http://your-server-ip:8080/health
 {"message":"UpdateHub server is running","status":"ok"}
 ```
 
-#### 8.3 测试登录
+##### 8.3 测试登录
 ```bash
 # 使用默认账户登录
 curl -X POST http://your-server-ip:8080/api/v1/auth/login \
@@ -370,6 +415,26 @@ maxmemory-policy allkeys-lru
 # 在 nginx.conf 中添加
 worker_processes auto;
 worker_connections 1024;
+```
+
+## 🔄 自动化脚本管理
+
+### 自动备份
+```bash
+cd /opt/UpdateHub/scripts
+./backup.sh
+```
+
+### 自动更新
+```bash
+cd /opt/UpdateHub/scripts
+./update.sh
+```
+
+### 环境检查
+```bash
+cd /opt/UpdateHub/scripts
+./check_env.sh
 ```
 
 ## 🔄 部署后检查清单

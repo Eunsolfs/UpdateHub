@@ -12,6 +12,20 @@
 
 ## 🚀 快速部署
 
+### 使用自动化脚本（推荐）⭐
+
+最简单的方式是使用自动化脚本：
+
+```bash
+# Linux/1Panel 环境
+cd /opt/UpdateHub/scripts
+chmod +x *.sh
+./check_env.sh      # 环境检查
+./deploy.sh         # 一键部署
+```
+
+脚本会自动处理所有复杂的部署步骤。
+
 ### 使用 Docker Compose（推荐）
 
 ```bash
