@@ -2,15 +2,13 @@
 
 本指南帮助您快速开始使用 UpdateHub。
 
-## 📚 文档索引
+## 📚 文档导航
 
-1. **[1Panel 部署教程](./1PANEL_DEPLOYMENT.md)** - 在 1Panel 环境中部署 UpdateHub
-2. **[服务更新教程](./SERVICE_UPDATE.md)** - 更新 UpdateHub 到最新版本
-3. **[API 文档](./API.md)** - API 接口文档
-4. **[开发文档](./DEVELOPMENT.md)** - 开发者指南
-5. **[部署文档](./DEPLOYMENT.md)** - 通用部署指南
+**第一次使用？** → 查看 [第一次部署完整操作指南](./FIRST_TIME_DEPLOYMENT.md) ⭐
 
-## 🚀 快速部署
+**需要详细文档？** → 查看 [文档导航](./INDEX.md)
+
+## 🚀 快速部署（推荐）
 
 ### 使用自动化脚本（推荐）⭐
 

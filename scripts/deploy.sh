@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 PROJECT_NAME="UpdateHub"
 INSTALL_DIR="/opt/UpdateHub"
 BACKUP_DIR="/opt/UpdateHub/backups"
-GITHUB_REPO="https://github.com/your-username/UpdateHub.git"
+GITHUB_REPO="https://github.com/Eunsolfs/UpdateHub.git"
 
 # 默认配置
 DEFAULT_DB_PASSWORD="updatehub"
