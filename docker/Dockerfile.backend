@@ -3,6 +3,10 @@ FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
+# 设置 Go modules proxy (使用国内镜像加速)
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GO111MODULE=on
+
 # 安装必要的工具
 RUN apk add --no-cache git
 
@@ -10,7 +14,7 @@ RUN apk add --no-cache git
 COPY backend/go.mod backend/go.sum ./
 
 # 下载依赖
-RUN go mod download
+RUN go mod download && go mod verify
 
 # 复制源代码
 COPY backend/ ./
