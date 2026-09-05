@@ -1,0 +1,76 @@
+{
+  "common": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "search": "搜索",
+    "reset": "重置",
+    "submit": "提交",
+    "back": "返回",
+    "loading": "加载中...",
+    "noData": "暂无数据",
+    "operation": "操作",
+    "status": "状态",
+    "createTime": "创建时间",
+    "updateTime": "更新时间"
+  },
+  "menu": {
+    "dashboard": "仪表盘",
+    "software": "软件管理",
+    "version": "版本管理",
+    "upload": "上传管理",
+    "storage": "存储配置",
+    "user": "用户管理",
+    "role": "角色管理",
+    "log": "操作日志",
+    "settings": "系统设置"
+  },
+  "dashboard": {
+    "title": "仪表盘",
+    "totalSoftware": "软件总数",
+    "totalVersions": "版本总数",
+    "onlineClients": "在线客户端",
+    "totalDownloads": "总下载次数",
+    "downloadTrend": "下载趋势",
+    "versionDistribution": "版本分布",
+    "platformDistribution": "平台分布",
+    "recentVersions": "最近发布版本",
+    "recentLogs": "最近操作日志"
+  },
+  "software": {
+    "title": "软件管理",
+    "name": "软件名称",
+    "identifier": "软件标识",
+    "description": "软件描述",
+    "icon": "软件图标",
+    "createSoftware": "创建软件",
+    "editSoftware": "编辑软件",
+    "deleteSoftware": "删除软件",
+    "softwareList": "软件列表"
+  },
+  "version": {
+    "title": "版本管理",
+    "versionNumber": "版本号",
+    "releaseNotes": "更新说明",
+    "platform": "平台",
+    "status": "状态",
+    "publish": "发布",
+    "rollback": "回滚",
+    "switch": "切换",
+    "draft": "草稿",
+    "published": "已发布",
+    "archived": "已归档",
+    "deleted": "已删除"
+  },
+  "auth": {
+    "login": "登录",
+    "logout": "退出登录",
+    "username": "用户名",
+    "password": "密码",
+    "loginSuccess": "登录成功",
+    "loginFailed": "登录失败"
+  }
+}

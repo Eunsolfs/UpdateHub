@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: updatehub-postgres
+    environment:
+      POSTGRES_DB: updatehub
+      POSTGRES_USER: updatehub
+      POSTGRES_PASSWORD: updatehub
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - updatehub-network
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: updatehub-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - updatehub-network
+    restart: unless-stopped
+
+  # 后端服务
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: updatehub-backend
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=updatehub
+      - DATABASE_PASSWORD=updatehub
+      - DATABASE_NAME=updatehub
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ../backend/uploads:/root/uploads
+      - ../backend/configs:/root/configs
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - updatehub-network
+    restart: unless-stopped
+
+  # 前端服务
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: updatehub-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - updatehub-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  updatehub-network:
+    driver: bridge

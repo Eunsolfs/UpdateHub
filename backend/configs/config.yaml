@@ -1,0 +1,70 @@
+server:
+  port: 8080
+  mode: debug  # debug/release
+
+database:
+  host: localhost
+  port: 5432
+  user: updatehub
+  password: updatehub
+  dbname: updatehub
+  sslmode: disable
+  timezone: Asia/Shanghai
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: your-secret-key-change-this
+  refresh_secret: your-refresh-secret-key-change-this
+  expire_hours: 24
+  refresh_expire_hours: 168
+
+upload:
+  max_file_size: 1073741824  # 1GB
+  chunk_size: 5242880        # 5MB
+  temp_dir: ./uploads/temp
+  upload_dir: ./uploads
+
+storage:
+  default: local
+  local:
+    base_path: ./uploads
+    url_prefix: http://localhost:8080/uploads
+  s3:
+    access_key_id: ""
+    secret_access_key: ""
+    region: us-east-1
+    bucket: ""
+    endpoint: ""
+  cos:
+    secret_id: ""
+    secret_key: ""
+    region: ap-guangzhou
+    bucket: ""
+
+security:
+  download_token_expire_hours: 1
+  referer_check_enabled: false
+  user_agent_check_enabled: false
+  ip_whitelist_enabled: false
+  ip_blacklist_enabled: true
+  geo_restriction_enabled: false
+
+rate_limit:
+  global:
+    requests_per_minute: 1000
+    requests_per_hour: 10000
+    requests_per_day: 100000
+  download:
+    requests_per_minute: 10
+    requests_per_hour: 50
+    requests_per_day: 200
+
+cdn:
+  enabled: false
+  provider: ""
+  domain: ""

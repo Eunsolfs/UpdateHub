@@ -1,6 +1,10 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
+# =====================
+# UpdateHub 项目 Git 忽略文件
+# =====================
+
+# ---------------------
+# Go 相关
+# ---------------------
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -17,16 +21,175 @@ coverage.*
 *.coverprofile
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
 # Go workspace file
 go.work
 go.work.sum
 
-# env file
-.env
+# Go build cache
+.cache/
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# ---------------------
+# Node.js / Vue 相关
+# ---------------------
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# Vite cache
+.vite/
+
+# ---------------------
+# 环境变量文件
+# ---------------------
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# ---------------------
+# 编辑器 / IDE
+# ---------------------
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ---------------------
+# 操作系统
+# ---------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+
+# ---------------------
+# 日志文件
+# ---------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------------------
+# 数据库
+# ---------------------
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+
+# ---------------------
+# 上传文件（开发环境）
+# ---------------------
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/uploads/temp/*
+!backend/uploads/temp/.gitkeep
+
+# ---------------------
+# 临时文件
+# ---------------------
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# ---------------------
+# 证书和密钥
+# ---------------------
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# ---------------------
+# Docker 相关
+# ---------------------
+docker-compose.override.yml
+
+# ---------------------
+# 测试覆盖率
+# ---------------------
+coverage/
+.nyc_output/
+
+# ---------------------
+# 文档生成
+# ---------------------
+docs/_build/
+docs/.doctrees/
+
+# ---------------------
+# 项目特定
+# ---------------------
+# 1Panel 部署配置
+.1panel/
+
+# 备份文件
+*.backup
+*.old
+
+# ---------------------
+# 保持的文件（不要忽略）
+# ---------------------
+!.gitkeep
+!.gitignore
+!.editorconfig

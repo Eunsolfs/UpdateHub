@@ -1,0 +1,76 @@
+{
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "reset": "Reset",
+    "submit": "Submit",
+    "back": "Back",
+    "loading": "Loading...",
+    "noData": "No data",
+    "operation": "Operation",
+    "status": "Status",
+    "createTime": "Create Time",
+    "updateTime": "Update Time"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "software": "Software Management",
+    "version": "Version Management",
+    "upload": "Upload Management",
+    "storage": "Storage Configuration",
+    "user": "User Management",
+    "role": "Role Management",
+    "log": "Operation Logs",
+    "settings": "System Settings"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "totalSoftware": "Total Software",
+    "totalVersions": "Total Versions",
+    "onlineClients": "Online Clients",
+    "totalDownloads": "Total Downloads",
+    "downloadTrend": "Download Trend",
+    "versionDistribution": "Version Distribution",
+    "platformDistribution": "Platform Distribution",
+    "recentVersions": "Recent Versions",
+    "recentLogs": "Recent Logs"
+  },
+  "software": {
+    "title": "Software Management",
+    "name": "Software Name",
+    "identifier": "Software Identifier",
+    "description": "Software Description",
+    "icon": "Software Icon",
+    "createSoftware": "Create Software",
+    "editSoftware": "Edit Software",
+    "deleteSoftware": "Delete Software",
+    "softwareList": "Software List"
+  },
+  "version": {
+    "title": "Version Management",
+    "versionNumber": "Version Number",
+    "releaseNotes": "Release Notes",
+    "platform": "Platform",
+    "status": "Status",
+    "publish": "Publish",
+    "rollback": "Rollback",
+    "switch": "Switch",
+    "draft": "Draft",
+    "published": "Published",
+    "archived": "Archived",
+    "deleted": "Deleted"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "username": "Username",
+    "password": "Password",
+    "loginSuccess": "Login successful",
+    "loginFailed": "Login failed"
+  }
+}
