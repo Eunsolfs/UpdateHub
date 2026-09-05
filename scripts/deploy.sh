@@ -119,7 +119,79 @@ check_environment() {
         fi
     fi
     
+    # 配置 Docker 镜像加速
+    configure_docker_acceleration
+    
     print_success "环境检查完成"
+}
+
+################################################################################
+# 配置 Docker 镜像加速
+################################################################################
+
+configure_docker_acceleration() {
+    print_info "配置 Docker 镜像加速..."
+    
+    # 检查是否已配置
+    if [ -f /etc/docker/daemon.json ] && grep -q "registry-mirrors" /etc/docker/daemon.json; then
+        print_info "Docker 镜像加速已配置"
+        return
+    fi
+    
+    print_info "国内服务器建议配置 Docker 镜像加速以加快下载速度"
+    echo ""
+    echo "推荐国内镜像源:"
+    echo "1) 腾讯云镜像加速"
+    echo "2) 阿里云镜像加速"
+    echo "3) 中科大镜像加速"
+    echo "4) 网易镜像加速"
+    echo "5) 跳过"
+    
+    read -p "请选择 (1-5): " choice
+    
+    case $choice in
+        1)
+            mirror="https://mirror.ccs.tencentyun.com"
+            ;;
+        2)
+            mirror="https://registry.cn-hangzhou.aliyuncs.com"
+            ;;
+        3)
+            mirror="https://docker.mirrors.ustc.edu.cn"
+            ;;
+        4)
+            mirror="https://hub-mirror.c.163.com"
+            ;;
+        5)
+            print_info "跳过镜像加速配置"
+            return
+            ;;
+        *)
+            print_warning "无效选择，跳过镜像加速配置"
+            return
+            ;;
+    esac
+    
+    # 创建 Docker 配置目录
+    sudo mkdir -p /etc/docker
+    
+    # 配置镜像加速（使用简单配置避免 referrers 问题）
+    sudo tee /etc/docker/daemon.json > /dev/null <<EOF
+{
+  "registry-mirrors": ["$mirror"],
+  "features": {
+    "registry-mirrors": true
+  }
+}
+EOF
+    
+    # 重启 Docker 服务
+    print_info "重启 Docker 服务..."
+    sudo systemctl daemon-reload
+    sudo systemctl restart docker
+    
+    print_success "Docker 镜像加速已配置"
+    print_info "镜像源: $mirror"
 }
 
 ################################################################################
