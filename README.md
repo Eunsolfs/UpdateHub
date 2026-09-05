@@ -95,8 +95,15 @@ cd /opt/UpdateHub/scripts
 
 UpdateHub 提供预构建的 Docker 镜像，托管在 GitHub Container Registry：
 
-- **后端镜像**: `ghcr.io/your-username/updatehub-backend`
-- **前端镜像**: `ghcr.io/your-username/updatehub-frontend`
+**注意**：GitHub Container Registry 要求镜像名称必须使用小写字母。
+
+- **后端镜像**: `ghcr.io/your-username/updatehub-backend` （将 `your-username` 替换为你的 GitHub 用户名，必须小写）
+- **前端镜像**: `ghcr.io/your-username/updatehub-frontend` （将 `your-username` 替换为你的 GitHub 用户名，必须小写）
+
+**示例**：
+如果你的 GitHub 用户名是 `Eunsolfs`，镜像名称应该是：
+- `ghcr.io/eunsolfs/updatehub-backend`
+- `ghcr.io/eunsolfs/updatehub-frontend`
 
 ### 镜像标签
 
@@ -107,7 +114,7 @@ UpdateHub 提供预构建的 Docker 镜像，托管在 GitHub Container Registry
 ### 拉取镜像
 
 ```bash
-# 拉取最新版本
+# 拉取最新版本（将 your-username 替换为你的 GitHub 用户名，必须小写）
 docker pull ghcr.io/your-username/updatehub-backend:latest
 docker pull ghcr.io/your-username/updatehub-frontend:latest
 

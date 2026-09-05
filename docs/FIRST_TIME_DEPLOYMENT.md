@@ -54,6 +54,21 @@ UpdateHub 现在使用现代化的 CI/CD 部署方式：
 - [ ] 已准备好访问 1Panel 的密码
 - [ ] **GitHub Container Registry访问权限**（重要）
 
+### 3. GitHub Container Registry 镜像命名规则（重要！）
+
+**重要**：GitHub Container Registry 要求镜像名称必须使用小写字母。
+
+- ❌ 错误：`ghcr.io/MyUser/UpdateHub-backend`
+- ✅ 正确：`ghcr.io/myuser/updatehub-backend`
+
+**如何确定你的镜像名称**：
+1. 访问你的 GitHub 仓库
+2. 查看仓库所有者名称（例如：`Eunsolfs`）
+3. 将其转换为小写（例如：`eunsolfs`）
+4. 镜像名称为：`ghcr.io/eunsolfs/updatehub-backend`
+
+在本文档的所有示例中，将 `your-username` 替换为你的 GitHub 用户名（必须小写）。
+
 ## 🚀 完整部署步骤
 
 ### 第一步：登录服务器
@@ -277,6 +292,7 @@ JWT 密钥 [your-secret-key-change-this]:
 **问题5：后端镜像地址**
 - **推荐**: 直接按回车（使用官方预构建镜像）
 - **自定义**: 如果有自定义镜像，可以输入完整地址
+- **重要**: 镜像名称必须使用小写字母，将 `your-username` 替换为你的 GitHub 用户名（小写）
 
 ```
 前端镜像 [ghcr.io/your-username/updatehub-frontend:latest]: 
@@ -285,6 +301,7 @@ JWT 密钥 [your-secret-key-change-this]:
 **问题6：前端镜像地址**
 - **推荐**: 直接按回车（使用官方预构建镜像）
 - **自定义**: 如果有自定义镜像，可以输入完整地址
+- **重要**: 镜像名称必须使用小写字母，将 `your-username` 替换为你的 GitHub 用户名（小写）
 
 ```
 服务器模式 [release]: 
