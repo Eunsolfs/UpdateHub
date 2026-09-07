@@ -560,8 +560,12 @@ EOF
     
     # 修改 docker-compose 配置以使用环境变量
     print_info "修改 Docker Compose 配置..."
-    sed -i "s|${SERVER_PORT:-8080}:8080|$SERVER_PORT:8080|g" $INSTALL_DIR/docker/docker-compose.1panel.yml
-    sed -i "s|${FRONTEND_PORT:-8080}:80|$FRONTEND_PORT:80|g" $INSTALL_DIR/docker/docker-compose.1panel.yml
+    # 确保 .env 文件中的 FRONTEND_PORT 被正确设置
+    if ! grep -q "FRONTEND_PORT" $INSTALL_DIR/docker/.env; then
+        echo "FRONTEND_PORT=$FRONTEND_PORT" >> $INSTALL_DIR/docker/.env
+    else
+        sed -i "s/FRONTEND_PORT=.*/FRONTEND_PORT=$FRONTEND_PORT/" $INSTALL_DIR/docker/.env
+    fi
     
     # 拉取预构建镜像
     print_info "拉取预构建的Docker镜像..."

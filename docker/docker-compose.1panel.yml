@@ -8,6 +8,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: updatehub-postgres
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: updatehub
       POSTGRES_USER: updatehub
@@ -31,6 +33,8 @@ services:
     image: redis:7-alpine
     container_name: updatehub-redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    env_file:
+      - .env
     volumes:
       - redis_data:/data
     ports:
@@ -48,6 +52,8 @@ services:
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/your-username/updatehub-backend:latest}
     container_name: updatehub-backend
+    env_file:
+      - .env
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
@@ -77,6 +83,8 @@ services:
   frontend:
     image: ${FRONTEND_IMAGE:-ghcr.io/your-username/updatehub-frontend:latest}
     container_name: updatehub-frontend
+    env_file:
+      - .env
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     depends_on:
