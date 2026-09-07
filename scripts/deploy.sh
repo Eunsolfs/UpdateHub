@@ -21,8 +21,8 @@ BACKUP_DIR="/opt/UpdateHub/backups"
 GITHUB_REPO="https://github.com/Eunsolfs/UpdateHub.git"
 
 # 镜像配置（GitHub Container Registry）
-DEFAULT_BACKEND_IMAGE="ghcr.io/eunsolfs/updatehub-backend:v1.0.3"
-DEFAULT_FRONTEND_IMAGE="ghcr.io/eunsolfs/updatehub-frontend:v1.0.3"
+DEFAULT_BACKEND_IMAGE="ghcr.io/eunsolfs/updatehub-backend:latest"
+DEFAULT_FRONTEND_IMAGE="ghcr.io/eunsolfs/updatehub-frontend:latest"
 
 # 默认配置
 DEFAULT_DB_PASSWORD="updatehub"
