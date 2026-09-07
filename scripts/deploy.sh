@@ -261,36 +261,143 @@ install_project() {
     mkdir -p $BACKUP_DIR/uploads
     mkdir -p $BACKUP_DIR/configs
     
-    # 克隆项目代码（仅用于获取配置文件）
-    print_info "克隆项目代码..."
-    if [ -d "$INSTALL_DIR/.git" ]; then
-        print_info "项目已存在，拉取最新代码..."
-        cd $INSTALL_DIR
+    # 检查项目代码和运行状态
+    print_info "检查项目状态..."
+    
+    # 检查是否已经存在有效的项目代码
+    if [ -f "$INSTALL_DIR/docker/docker-compose.1panel.yml" ] && [ -f "$INSTALL_DIR/docker/.env.example" ]; then
+        print_info "项目代码已存在"
         
-        # 检查是否有本地修改
-        if [ -n "$(git status --porcelain)" ]; then
-            print_warning "检测到本地修改，正在保存..."
-            git stash push -m "deploy-sh-backup-$(date +%Y%m%d_%H%M%S)"
+        # 检查服务是否正在运行
+        cd $INSTALL_DIR
+        if docker-compose -f docker/docker-compose.1panel.yml ps | grep -q "Up"; then
+            print_info "检测到服务正在运行"
+            print_warning "项目已部署且正在运行"
+            echo ""
+            echo "请选择操作："
+            echo "1) 更新现有部署（推荐）"
+            echo "2) 重新安装（会清除现有数据）"
+            echo "3) 取消"
+            read -p "请选择 (1-3): " choice
+            
+            case $choice in
+                1)
+                    print_info "运行更新流程..."
+                    cd $INSTALL_DIR/scripts
+                    ./update.sh
+                    exit 0
+                    ;;
+                2)
+                    print_warning "重新安装将清除现有数据"
+                    read -p "确认继续? (y/n): " confirm
+                    if [ "$confirm" != "y" ]; then
+                        print_info "取消操作"
+                        exit 0
+                    fi
+                    print_info "停止现有服务..."
+                    docker-compose -f docker/docker-compose.1panel.yml down
+                    print_info "清理现有数据..."
+                    docker-compose -f docker/docker-compose.1panel.yml down -v
+                    ;;
+                3)
+                    print_info "取消操作"
+                    exit 0
+                    ;;
+                *)
+                    print_error "无效选择"
+                    exit 1
+                    ;;
+            esac
+        else
+            print_info "检测到项目已存在但服务未运行"
+            echo ""
+            echo "请选择操作："
+            echo "1) 启动现有部署"
+            echo "2) 更新现有部署"
+            echo "3) 重新安装（会清除现有数据）"
+            echo "4) 取消"
+            read -p "请选择 (1-4): " choice
+            
+            case $choice in
+                1)
+                    print_info "启动现有服务..."
+                    cd $INSTALL_DIR
+                    docker-compose -f docker/docker-compose.1panel.yml up -d
+                    print_success "服务已启动"
+                    exit 0
+                    ;;
+                2)
+                    print_info "运行更新流程..."
+                    cd $INSTALL_DIR/scripts
+                    ./update.sh
+                    exit 0
+                    ;;
+                3)
+                    print_warning "重新安装将清除现有数据"
+                    read -p "确认继续? (y/n): " confirm
+                    if [ "$confirm" != "y" ]; then
+                        print_info "取消操作"
+                        exit 0
+                    fi
+                    ;;
+                4)
+                    print_info "取消操作"
+                    exit 0
+                    ;;
+                *)
+                    print_error "无效选择"
+                    exit 1
+                    ;;
+            esac
         fi
         
-        # 拉取最新代码
-        git fetch origin main
-        git reset --hard origin/main
-    elif [ -d "$INSTALL_DIR" ]; then
-        # 目录存在但不是 git 仓库
-        print_warning "安装目录已存在但不是 git 仓库"
-        print_info "正在备份现有目录..."
-        BACKUP_INSTALL_DIR="${INSTALL_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
-        mv $INSTALL_DIR $BACKUP_INSTALL_DIR
-        print_success "现有目录已备份到: $BACKUP_INSTALL_DIR"
-        
-        # 克隆项目
-        git clone $GITHUB_REPO $INSTALL_DIR
-        cd $INSTALL_DIR
+        # 如果选择了重新安装，继续后续的代码更新流程
+        print_info "更新项目代码..."
+        if [ -d "$INSTALL_DIR/.git" ]; then
+            # 检查是否有本地修改
+            if [ -n "$(git status --porcelain)" ]; then
+                print_warning "检测到本地修改，正在保存..."
+                git stash push -m "deploy-sh-backup-$(date +%Y%m%d_%H%M%S)"
+            fi
+            
+            # 拉取最新代码
+            git fetch origin main
+            git reset --hard origin/main
+        fi
     else
-        # 目录不存在，直接克隆
-        git clone $GITHUB_REPO $INSTALL_DIR
-        cd $INSTALL_DIR
+        # 项目代码不存在，需要下载
+        print_info "下载项目代码..."
+        
+        if [ -d "$INSTALL_DIR/.git" ]; then
+            # 是 git 仓库，拉取最新代码
+            print_info "项目已存在，拉取最新代码..."
+            cd $INSTALL_DIR
+            
+            # 检查是否有本地修改
+            if [ -n "$(git status --porcelain)" ]; then
+                print_warning "检测到本地修改，正在保存..."
+                git stash push -m "deploy-sh-backup-$(date +%Y%m%d_%H%M%S)"
+            fi
+            
+            # 拉取最新代码
+            git fetch origin main
+            git reset --hard origin/main
+        elif [ -d "$INSTALL_DIR" ]; then
+            # 目录存在但不是 git 仓库，备份现有目录
+            print_warning "安装目录已存在但不是 git 仓库"
+            print_info "正在备份现有目录..."
+            BACKUP_INSTALL_DIR="${INSTALL_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
+            mv $INSTALL_DIR $BACKUP_INSTALL_DIR
+            print_success "现有目录已备份到: $BACKUP_INSTALL_DIR"
+            
+            # 克隆项目
+            git clone $GITHUB_REPO $INSTALL_DIR
+            cd $INSTALL_DIR
+        else
+            # 目录不存在，直接克隆
+            git clone $GITHUB_REPO $INSTALL_DIR
+            cd $INSTALL_DIR
+        fi
     fi
     
     # 创建环境变量文件
