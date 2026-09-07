@@ -28,6 +28,7 @@ DEFAULT_FRONTEND_IMAGE="ghcr.io/eunsolfs/updatehub-frontend:latest"
 DEFAULT_DB_PASSWORD="updatehub"
 DEFAULT_JWT_SECRET="your-secret-key-change-this"
 DEFAULT_SERVER_PORT="8899"  # 改为不常见的端口
+DEFAULT_FRONTEND_PORT="8080"  # 前端端口也改为不常见的
 
 ################################################################################
 # 打印函数
@@ -167,7 +168,38 @@ configure_docker_acceleration() {
     # 检查是否已配置
     if [ -f /etc/docker/daemon.json ] && grep -q "registry-mirrors" /etc/docker/daemon.json; then
         print_info "Docker 镜像加速已配置"
-        return
+        print_warning "如果遇到网络问题，建议跳过镜像加速使用官方源"
+        echo ""
+        echo "推荐国内镜像源:"
+        echo "1) 腾讯云镜像加速"
+        echo "2) 阿里云镜像加速"
+        echo "3) 中科大镜像加速"
+        echo "4) 网易镜像加速"
+        echo "5) DaoCloud 镜像加速"
+        echo "6) 南京大学镜像加速"
+        echo "7) DockerProxy 镜像加速"
+        echo "8) 清除现有配置，使用官方源（推荐解决网络问题）"
+        echo "9) 跳过配置"
+        
+        read -p "请选择 (1-9): " choice
+        
+        case $choice in
+            8)
+                print_info "清除现有镜像加速配置..."
+                sudo rm -f /etc/docker/daemon.json
+                sudo systemctl daemon-reload
+                sudo systemctl restart docker
+                print_success "已清除镜像加速配置，将使用官方源"
+                return
+                ;;
+            9)
+                print_info "跳过镜像加速配置"
+                return
+                ;;
+            *)
+                # 其他选项正常配置
+                ;;
+        esac
     fi
     
     print_info "国内服务器建议配置 Docker 镜像加速以加快下载速度"
@@ -288,6 +320,35 @@ get_user_input() {
         print_success "端口 $SERVER_PORT 可用"
     fi
     
+    # 前端端口
+    read -p "前端端口 [$DEFAULT_FRONTEND_PORT]: " input_frontend_port
+    FRONTEND_PORT=${input_frontend_port:-$DEFAULT_FRONTEND_PORT}
+    
+    # 检测前端端口是否可用
+    print_info "检测前端端口 $FRONTEND_PORT 是否可用..."
+    if ! check_port_available $FRONTEND_PORT; then
+        print_warning "前端端口 $FRONTEND_PORT 已被占用"
+        print_info "正在查找可用端口..."
+        AVAILABLE_FRONTEND_PORT=$(find_available_port $FRONTEND_PORT)
+        
+        if [ "$AVAILABLE_FRONTEND_PORT" != "$FRONTEND_PORT" ]; then
+            print_info "找到可用端口: $AVAILABLE_FRONTEND_PORT"
+            read -p "是否使用端口 $AVAILABLE_FRONTEND_PORT? (y/n): " use_available
+            if [[ $use_available =~ ^[Yy]$ ]]; then
+                FRONTEND_PORT=$AVAILABLE_FRONTEND_PORT
+            else
+                print_info "请手动输入其他端口:"
+                read -p "前端端口: " manual_port
+                FRONTEND_PORT=$manual_port
+            fi
+        else
+            print_error "无法找到可用端口"
+            exit 1
+        fi
+    else
+        print_success "前端端口 $FRONTEND_PORT 可用"
+    fi
+    
     # 后端镜像
     read -p "后端镜像 [$DEFAULT_BACKEND_IMAGE]: " input_backend_image
     BACKEND_IMAGE=${input_backend_image:-$DEFAULT_BACKEND_IMAGE}
@@ -305,6 +366,7 @@ get_user_input() {
     echo "  数据库密码: $DB_PASSWORD"
     echo "  JWT 密钥: $JWT_SECRET"
     echo "  服务器端口: $SERVER_PORT"
+    echo "  前端端口: $FRONTEND_PORT"
     echo "  后端镜像: $BACKEND_IMAGE"
     echo "  前端镜像: $FRONTEND_IMAGE"
     echo "  服务器模式: $SERVER_MODE"
@@ -486,6 +548,7 @@ REFRESH_SECRET=$JWT_SECRET-refresh
 
 SERVER_MODE=$SERVER_MODE
 SERVER_PORT=$SERVER_PORT
+FRONTEND_PORT=$FRONTEND_PORT
 
 BACKEND_IMAGE=$BACKEND_IMAGE
 FRONTEND_IMAGE=$FRONTEND_IMAGE
@@ -498,11 +561,36 @@ EOF
     # 修改 docker-compose 配置以使用环境变量
     print_info "修改 Docker Compose 配置..."
     sed -i "s|${SERVER_PORT:-8080}:8080|$SERVER_PORT:8080|g" $INSTALL_DIR/docker/docker-compose.1panel.yml
+    sed -i "s|${FRONTEND_PORT:-8080}:80|$FRONTEND_PORT:80|g" $INSTALL_DIR/docker/docker-compose.1panel.yml
     
     # 拉取预构建镜像
     print_info "拉取预构建的Docker镜像..."
-    docker pull $BACKEND_IMAGE
-    docker pull $FRONTEND_IMAGE
+    
+    # 尝试拉取镜像，增加重试机制
+    MAX_RETRIES=3
+    RETRY_COUNT=0
+    
+    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        print_info "尝试拉取镜像 (第 $((RETRY_COUNT + 1)) 次)..."
+        
+        if docker pull $BACKEND_IMAGE && docker pull $FRONTEND_IMAGE; then
+            print_success "镜像拉取完成"
+            break
+        else
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                print_warning "镜像拉取失败，等待 10 秒后重试..."
+                sleep 10
+            else
+                print_error "镜像拉取失败，已达到最大重试次数"
+                print_info "请检查网络连接或手动拉取镜像："
+                print_info "  docker pull $BACKEND_IMAGE"
+                print_info "  docker pull $FRONTEND_IMAGE"
+                exit 1
+            fi
+        fi
+    done
     
     # 启动服务
     print_info "启动服务..."
@@ -538,7 +626,7 @@ verify_installation() {
     
     # 检查前端
     print_info "检查前端服务..."
-    if curl -f http://localhost/ &> /dev/null; then
+    if curl -f http://localhost:$FRONTEND_PORT/ &> /dev/null; then
         print_success "前端服务正常"
     else
         print_warning "前端服务可能需要更多时间启动"
@@ -559,7 +647,7 @@ show_info() {
     echo "部署方式: 使用预构建Docker镜像 (CI/CD)"
     echo ""
     echo "访问地址:"
-    echo "  前端: http://$(hostname -I | awk '{print $1}')"
+    echo "  前端: http://$(hostname -I | awk '{print $1}'):$FRONTEND_PORT"
     echo "  后端: http://$(hostname -I | awk '{print $1}'):$SERVER_PORT"
     echo "  健康检查: http://$(hostname -I | awk '{print $1}'):$SERVER_PORT/health"
     echo ""
