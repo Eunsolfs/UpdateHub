@@ -276,7 +276,19 @@ install_project() {
         # 拉取最新代码
         git fetch origin main
         git reset --hard origin/main
+    elif [ -d "$INSTALL_DIR" ]; then
+        # 目录存在但不是 git 仓库
+        print_warning "安装目录已存在但不是 git 仓库"
+        print_info "正在备份现有目录..."
+        BACKUP_INSTALL_DIR="${INSTALL_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
+        mv $INSTALL_DIR $BACKUP_INSTALL_DIR
+        print_success "现有目录已备份到: $BACKUP_INSTALL_DIR"
+        
+        # 克隆项目
+        git clone $GITHUB_REPO $INSTALL_DIR
+        cd $INSTALL_DIR
     else
+        # 目录不存在，直接克隆
         git clone $GITHUB_REPO $INSTALL_DIR
         cd $INSTALL_DIR
     fi
