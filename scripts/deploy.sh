@@ -18,11 +18,11 @@ NC='\033[0m' # No Color
 PROJECT_NAME="UpdateHub"
 INSTALL_DIR="/opt/UpdateHub"
 BACKUP_DIR="/opt/UpdateHub/backups"
-GITHUB_REPO="https://github.com/your-username/UpdateHub.git"
+GITHUB_REPO="https://github.com/Eunsolfs/UpdateHub.git"
 
 # 镜像配置（GitHub Container Registry）
-DEFAULT_BACKEND_IMAGE="ghcr.io/your-username/updatehub-backend:latest"
-DEFAULT_FRONTEND_IMAGE="ghcr.io/your-username/updatehub-frontend:latest"
+DEFAULT_BACKEND_IMAGE="ghcr.io/eunsolfs/updatehub-backend:latest"
+DEFAULT_FRONTEND_IMAGE="ghcr.io/eunsolfs/updatehub-frontend:latest"
 
 # 默认配置
 DEFAULT_DB_PASSWORD="updatehub"
@@ -266,7 +266,16 @@ install_project() {
     if [ -d "$INSTALL_DIR/.git" ]; then
         print_info "项目已存在，拉取最新代码..."
         cd $INSTALL_DIR
-        git pull origin main
+        
+        # 检查是否有本地修改
+        if [ -n "$(git status --porcelain)" ]; then
+            print_warning "检测到本地修改，正在保存..."
+            git stash push -m "deploy-sh-backup-$(date +%Y%m%d_%H%M%S)"
+        fi
+        
+        # 拉取最新代码
+        git fetch origin main
+        git reset --hard origin/main
     else
         git clone $GITHUB_REPO $INSTALL_DIR
         cd $INSTALL_DIR

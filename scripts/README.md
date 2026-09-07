@@ -7,17 +7,21 @@
 UpdateHub 提供以下自动化脚本：
 
 ### Linux 脚本
+- `install.sh` - 一键安装脚本 ⭐ 超级简单
 - `check_env.sh` - 环境检查脚本
 - `deploy.sh` - 一键部署脚本（CI/CD版本）
 - `update.sh` - 一键更新脚本（CI/CD版本）
 - `backup.sh` - 自动备份脚本
+- `uninstall.sh` - 一键卸载脚本 ⭐
 - `ops.sh` - 运维管理脚本 ⭐
 
 ### Windows 脚本
+- `install.ps1` - 一键安装脚本 ⭐ 超级简单
 - `check_env.ps1` - 环境检查脚本
 - `deploy.ps1` - 一键部署脚本（CI/CD版本）
 - `update.ps1` - 一键更新脚本（CI/CD版本）
 - `backup.ps1` - 自动备份脚本
+- `uninstall.ps1` - 一键卸载脚本 ⭐
 - `ops.ps1` - 运维管理脚本 ⭐
 
 ## 🚀 部署方式说明
@@ -35,7 +39,128 @@ UpdateHub 现在使用 GitHub Actions 自动构建 Docker 镜像，部署时只�
 - 🎯 构建环境标准化
 - 📦 版本管理清晰
 
-## 🔧 环境检查脚本
+## � 一键安装脚本 ⭐
+
+### Linux: install.sh
+
+#### 使用方法（超级简单）
+
+```bash
+# 步骤1：下载安装脚本
+curl -fsSL https://raw.githubusercontent.com/Eunsolfs/UpdateHub/main/scripts/install.sh -o install.sh
+
+# 步骤2：添加执行权限
+chmod +x install.sh
+
+# 步骤3：运行安装脚本
+sudo ./install.sh
+```
+
+#### 功能说明
+
+一键安装脚本会自动完成以下操作：
+
+1. **检查基础环境**
+   - 检查操作系统
+   - 检查网络连接
+   - 检查 curl 和 git
+
+2. **安装 Docker**
+   - 自动安装 Docker
+   - 启动 Docker 服务
+   - 配置 Docker 自动启动
+
+3. **安装 Docker Compose**
+   - 自动下载并安装 Docker Compose
+   - 配置执行权限
+
+4. **下载项目代码**
+   - 从 GitHub 克隆项目
+   - 下载到临时目录
+
+5. **执行部署**
+   - 移动项目到安装目录
+   - 添加脚本执行权限
+   - 自动运行部署脚本
+
+#### 输出示例
+
+```
+========================================
+  UpdateHub 一键安装
+========================================
+
+[INFO] 本脚本将自动完成以下操作：
+[INFO] 1. 检查基础环境
+[INFO] 2. 安装 Docker 和 Docker Compose
+[INFO] 3. 下载项目代码
+[INFO] 4. 执行自动化部署
+
+是否继续? (y/n): y
+
+========================================
+  检查基础环境...
+========================================
+[INFO] 操作系统: Ubuntu 22.04.3 LTS
+[SUCCESS] 网络连接正常
+[SUCCESS] curl 已安装
+[SUCCESS] git 已安装
+
+========================================
+  检查/安装 Docker...
+========================================
+[SUCCESS] Docker 已安装: Docker version 24.0.7
+
+========================================
+  检查/安装 Docker Compose...
+========================================
+[SUCCESS] Docker Compose 已安装: Docker Compose version 2.21.0
+
+========================================
+  下载项目代码...
+========================================
+[INFO] 正在从 GitHub 克隆项目...
+[SUCCESS] 项目代码下载完成
+
+========================================
+  执行部署...
+========================================
+[INFO] 移动项目到安装目录...
+[INFO] 添加脚本执行权限...
+[INFO] 启动自动化部署...
+
+========================================
+  安装完成
+========================================
+[SUCCESS] UpdateHub 已成功安装！
+[INFO] 项目目录: /opt/UpdateHub
+[INFO] 部署脚本: /opt/UpdateHub/scripts/deploy.sh
+[INFO] 运维脚本: /opt/UpdateHub/scripts/ops.sh
+[INFO] 卸载脚本: /opt/UpdateHub/scripts/uninstall.sh
+```
+
+### Windows: install.ps1
+
+#### 使用方法
+
+```powershell
+# 步骤1：下载安装脚本
+# 从 GitHub 下载 install.ps1
+
+# 步骤2：右键点击脚本，选择"以管理员身份运行"
+
+# 步骤3：按照提示完成安装
+```
+
+#### 功能说明
+
+与 Linux 版本功能相同，支持：
+- 检查基础环境
+- 检查 Docker Desktop
+- 下载项目代码
+- 执行自动化部署
+
+## �🔧 环境检查脚本
 
 ### Linux: check_env.sh
 
@@ -649,7 +774,72 @@ cd Y:\sourcecode\UpdateHub\scripts
 - 重启服务
 - 查看当前配置
 
-## 🔧 脚本配置
+## �️ 卸载脚本 ⭐
+
+### Linux: uninstall.sh
+
+#### 使用方法
+```bash
+cd /opt/UpdateHub/scripts
+chmod +x uninstall.sh
+./uninstall.sh
+```
+
+#### 功能说明
+
+卸载脚本提供三种卸载模式：
+
+1. **保留数据，只删除服务**
+   - 停止所有服务
+   - 删除 Docker 容器
+   - 保留数据库数据
+   - 保留配置文件
+   - 保留上传文件
+   - 保留 Docker 镜像
+   - 适用场景：计划重新部署，需要保留数据
+
+2. **清除所有数据和服务**
+   - 停止所有服务
+   - 删除 Docker 容器
+   - 删除数据库数据
+   - 删除配置文件
+   - 删除上传文件
+   - 删除 Docker 镜像
+   - 删除项目文件
+   - 适用场景：完全卸载，不保留任何数据
+
+3. **选择性清理**
+   - 清理 Docker 容器
+   - 清理 Docker 镜像
+   - 清理数据卷（数据库数据）
+   - 清理配置文件
+   - 清理上传文件
+   - 清理项目文件
+   - 适用场景：部分清理，保留需要的内容
+
+#### 安全特性
+
+- ✅ 卸载前自动备份数据
+- ✅ 每个操作都需要确认
+- ✅ 显示详细的操作说明
+- ✅ 不可逆操作有明确警告
+
+### Windows: uninstall.ps1
+
+#### 使用方法
+```powershell
+cd Y:\sourcecode\UpdateHub\scripts
+.\uninstall.ps1
+```
+
+#### 功能说明
+
+与 Linux 版本功能相同，支持：
+- 保留数据卸载
+- 完全卸载
+- 选择性清理
+
+## �🔧 脚本配置
 
 ### 环境变量配置
 
