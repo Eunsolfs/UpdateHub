@@ -27,7 +27,7 @@ DEFAULT_FRONTEND_IMAGE="ghcr.io/eunsolfs/updatehub-frontend:latest"
 # 默认配置
 DEFAULT_DB_PASSWORD="updatehub"
 DEFAULT_JWT_SECRET="your-secret-key-change-this"
-DEFAULT_SERVER_PORT="8080"
+DEFAULT_SERVER_PORT="8899"  # 改为不常见的端口
 
 ################################################################################
 # 打印函数
@@ -53,6 +53,38 @@ print_header() {
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}  $1${NC}"
     echo -e "${GREEN}========================================${NC}"
+}
+
+################################################################################
+# 端口检测函数
+################################################################################
+
+check_port_available() {
+    local port=$1
+    if netstat -tuln 2>/dev/null | grep -q ":$port "; then
+        return 1  # 端口被占用
+    else
+        return 0  # 端口可用
+    fi
+}
+
+find_available_port() {
+    local base_port=$1
+    local max_attempts=100
+    local attempt=0
+    
+    while [ $attempt -lt $max_attempts ]; do
+        local test_port=$((base_port + attempt))
+        if check_port_available $test_port; then
+            echo $test_port
+            return 0
+        fi
+        attempt=$((attempt + 1))
+    done
+    
+    # 如果找不到可用端口，返回 base_port
+    echo $base_port
+    return 1
 }
 
 ################################################################################
@@ -230,6 +262,31 @@ get_user_input() {
     # 服务器端口
     read -p "服务器端口 [$DEFAULT_SERVER_PORT]: " input_port
     SERVER_PORT=${input_port:-$DEFAULT_SERVER_PORT}
+    
+    # 检测端口是否可用
+    print_info "检测端口 $SERVER_PORT 是否可用..."
+    if ! check_port_available $SERVER_PORT; then
+        print_warning "端口 $SERVER_PORT 已被占用"
+        print_info "正在查找可用端口..."
+        AVAILABLE_PORT=$(find_available_port $SERVER_PORT)
+        
+        if [ "$AVAILABLE_PORT" != "$SERVER_PORT" ]; then
+            print_info "找到可用端口: $AVAILABLE_PORT"
+            read -p "是否使用端口 $AVAILABLE_PORT? (y/n): " use_available
+            if [[ $use_available =~ ^[Yy]$ ]]; then
+                SERVER_PORT=$AVAILABLE_PORT
+            else
+                print_info "请手动输入其他端口:"
+                read -p "服务器端口: " manual_port
+                SERVER_PORT=$manual_port
+            fi
+        else
+            print_error "无法找到可用端口"
+            exit 1
+        fi
+    else
+        print_success "端口 $SERVER_PORT 可用"
+    fi
     
     # 后端镜像
     read -p "后端镜像 [$DEFAULT_BACKEND_IMAGE]: " input_backend_image
