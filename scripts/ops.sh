@@ -336,21 +336,24 @@ configure_docker_acceleration() {
     
     echo ""
     echo "推荐国内镜像源:"
-    echo "1) 阿里云镜像加速"
-    echo "2) 腾讯云镜像加速"
+    echo "1) 腾讯云镜像加速"
+    echo "2) 阿里云镜像加速"
     echo "3) 中科大镜像加速"
     echo "4) 网易镜像加速"
-    echo "5) 自定义镜像源"
-    echo "6) 跳过"
+    echo "5) DaoCloud 镜像加速"
+    echo "6) 南京大学镜像加速"
+    echo "7) DockerProxy 镜像加速"
+    echo "8) 自定义镜像源"
+    echo "9) 跳过"
     
-    read -p "请选择 (1-6): " choice
+    read -p "请选择 (1-9): " choice
     
     case $choice in
         1)
             mirror="https://mirror.ccs.tencentyun.com"
             ;;
         2)
-            mirror="https://mirror.ccs.tencentyun.com"
+            mirror="https://registry.cn-hangzhou.aliyuncs.com"
             ;;
         3)
             mirror="https://docker.mirrors.ustc.edu.cn"
@@ -359,9 +362,18 @@ configure_docker_acceleration() {
             mirror="https://hub-mirror.c.163.com"
             ;;
         5)
-            read -p "输入自定义镜像源地址: " mirror
+            mirror="https://docker.m.daocloud.io"
             ;;
         6)
+            mirror="https://docker.nju.edu.cn"
+            ;;
+        7)
+            mirror="https://dockerproxy.com"
+            ;;
+        8)
+            read -p "输入自定义镜像源地址: " mirror
+            ;;
+        9)
             print_info "跳过镜像加速配置"
             return
             ;;

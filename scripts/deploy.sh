@@ -145,9 +145,12 @@ configure_docker_acceleration() {
     echo "2) 阿里云镜像加速"
     echo "3) 中科大镜像加速"
     echo "4) 网易镜像加速"
-    echo "5) 跳过"
+    echo "5) DaoCloud 镜像加速"
+    echo "6) 南京大学镜像加速"
+    echo "7) DockerProxy 镜像加速"
+    echo "8) 跳过（推荐，避免 referrers 问题）"
     
-    read -p "请选择 (1-5): " choice
+    read -p "请选择 (1-8): " choice
     
     case $choice in
         1)
@@ -163,6 +166,15 @@ configure_docker_acceleration() {
             mirror="https://hub-mirror.c.163.com"
             ;;
         5)
+            mirror="https://docker.m.daocloud.io"
+            ;;
+        6)
+            mirror="https://docker.nju.edu.cn"
+            ;;
+        7)
+            mirror="https://dockerproxy.com"
+            ;;
+        8)
             print_info "跳过镜像加速配置"
             return
             ;;
@@ -175,13 +187,15 @@ configure_docker_acceleration() {
     # 创建 Docker 配置目录
     sudo mkdir -p /etc/docker
     
-    # 配置镜像加速（使用简单配置避免 referrers 问题）
+    # 配置镜像加速（禁用 referrers 以避免错误）
     sudo tee /etc/docker/daemon.json > /dev/null <<EOF
 {
   "registry-mirrors": ["$mirror"],
   "features": {
     "registry-mirrors": true
-  }
+  },
+  "experimental": false,
+  "max-concurrent-downloads": 10
 }
 EOF
     
