@@ -4,11 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -29,14 +24,9 @@ jobs:
     - name: Extract version from tag
       id: version
       run: |
-        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "is_tag=true" >> $GITHUB_OUTPUT
-        else
-          echo "version=latest" >> $GITHUB_OUTPUT
-          echo "is_tag=false" >> $GITHUB_OUTPUT
-        fi
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "is_tag=true" >> $GITHUB_OUTPUT
 
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v3
@@ -50,10 +40,10 @@ jobs:
       with:
         context: .
         file: ./docker/Dockerfile.backend
-        push: ${{ github.event_name != 'pull_request' }}
+        push: true
         tags: |
           ghcr.io/${{ steps.lowercase.outputs.username }}/updatehub-backend:latest
-          ${{ steps.version.outputs.is_tag == 'true' && format('ghcr.io/{0}/updatehub-backend:{1}', steps.lowercase.outputs.username, steps.version.outputs.version) || '' }}
+          ghcr.io/${{ steps.lowercase.outputs.username }}/updatehub-backend:${{ steps.version.outputs.version }}
         labels: |
           org.opencontainers.image.source=https://github.com/${{ github.repository }}
           org.opencontainers.image.revision=${{ github.sha }}
@@ -66,10 +56,10 @@ jobs:
       with:
         context: .
         file: ./docker/Dockerfile.frontend
-        push: ${{ github.event_name != 'pull_request' }}
+        push: true
         tags: |
           ghcr.io/${{ steps.lowercase.outputs.username }}/updatehub-frontend:latest
-          ${{ steps.version.outputs.is_tag == 'true' && format('ghcr.io/{0}/updatehub-frontend:{1}', steps.lowercase.outputs.username, steps.version.outputs.version) || '' }}
+          ghcr.io/${{ steps.lowercase.outputs.username }}/updatehub-frontend:${{ steps.version.outputs.version }}
         labels: |
           org.opencontainers.image.source=https://github.com/${{ github.repository }}
           org.opencontainers.image.revision=${{ github.sha }}
